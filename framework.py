@@ -31,6 +31,12 @@ class PerforceFramework(tank.platform.Framework):
     
     def destroy_framework(self):
         self.log_debug("%s: Destroying..." % self)
+    
+    def connect(self):
+        """
+        """
+        util = self.import_module("util")
+        return util.connect(self)
         
     def __init_p4python(self):
         """
@@ -49,6 +55,7 @@ class PerforceFramework(tank.platform.Framework):
             return
         
         # add the platform specific path to sys.path:
+        # (AD) - this should be python version dependent as well!
         if sys.platform == "darwin":
             p4_path = os.path.join(self.disk_location, "resources","p4python_py26_p42012.1_mac", "python")
             sys.path.append(p4_path)
