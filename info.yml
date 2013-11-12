@@ -17,9 +17,9 @@ configuration:
         description: Perforce server to connect to
         
     port:
-        type: str
+        type: int
         description: Port on perforce server to connect to
-        default_value: '1666'
+        default_value: 1666
 
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:

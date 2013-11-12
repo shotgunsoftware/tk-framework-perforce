@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="res">
+    <file>p4_icon.png</file>
+  </qresource>
+</RCC>

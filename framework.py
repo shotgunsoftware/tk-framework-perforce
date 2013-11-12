@@ -38,6 +38,10 @@ class PerforceFramework(tank.platform.Framework):
         util = self.import_module("util")
         return util.connect(self)
         
+    def connect_with_dlg(self):
+        util = self.import_module("util")
+        return util.connect_with_dlg(self)
+        
     def __init_p4python(self):
         """
         Make sure that p4python is available and if it's
