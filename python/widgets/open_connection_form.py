@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-# 
 # Copyright (c) 2013 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
@@ -19,7 +17,6 @@ class OpenConnectionForm(QtGui.QWidget):
     """
     
     # signals:
-    browse_user_clicked = QtCore.Signal(QtGui.QWidget)
     browse_workspace_clicked = QtCore.Signal(QtGui.QWidget)
     open_clicked = QtCore.Signal(QtGui.QWidget)
     
@@ -27,7 +24,7 @@ class OpenConnectionForm(QtGui.QWidget):
     def exit_code(self):
         return self._exit_code
     
-    def __init__(self, server, port, user="", workspace="", setup_proc = None, parent=None):
+    def __init__(self, server, port, user, workspace="", setup_proc = None, parent=None):
         """
         Construction
         """
@@ -36,6 +33,7 @@ class OpenConnectionForm(QtGui.QWidget):
         self._exit_code = QtGui.QDialog.Rejected
         self._server = server
         self._port = port
+        self._user = user
         
         # create the UI:
         self.__ui = Ui_OpenConnectionForm()
@@ -44,14 +42,13 @@ class OpenConnectionForm(QtGui.QWidget):
         # hook up the UI:
         self.__ui.ok_btn.clicked.connect(self._on_ok)
         self.__ui.cancel_btn.clicked.connect(self._on_cancel)
-        self.__ui.user_browse_btn.clicked.connect(self._on_browse_user)
         self.__ui.workspace_browse_btn.clicked.connect(self._on_browse_workspace)
-        self.__ui.user_edit.textEdited.connect(self._on_edit_changed)
         self.__ui.workspace_edit.textEdited.connect(self._on_edit_changed)
         
         server_string = "%s:%d" % (self._server, self._port)
-        self.__ui.server_edit.setText(server_string)
-        self.__ui.user_edit.setText(user)
+        self.__ui.host_label.setText(server_string)
+        self.__ui.user_label.setText(self._user)
+        
         self.__ui.workspace_edit.setText(workspace)
         
         if setup_proc:
@@ -70,12 +67,9 @@ class OpenConnectionForm(QtGui.QWidget):
         return self._port
         
     # user property:
-    def _get_user(self):
-        return str(self.__ui.user_edit.text())
-    def _set_user(self, user):
-        self.__ui.user_edit.setText(user)
-        self._update_ui()
-    user = property(_get_user, _set_user)
+    @property
+    def user(self):
+        return self._user
     
     # workspace property:
     def _get_workspace(self):
@@ -101,11 +95,6 @@ class OpenConnectionForm(QtGui.QWidget):
         self._exit_code = QtGui.QDialog.Rejected
         #self.close()
         
-    def _on_browse_user(self):
-        """
-        """
-        self.browse_user_clicked.emit(self)
-    
     def _on_browse_workspace(self):
         """
         """
@@ -117,11 +106,9 @@ class OpenConnectionForm(QtGui.QWidget):
     def _update_ui(self):
         """
         """
-        have_user = bool(self.user)
         have_workspace = bool(self.workspace)
-        
-        self.__ui.workspace_browse_btn.setEnabled(have_user)
-        self.__ui.ok_btn.setEnabled(have_user and have_workspace)
+
+        self.__ui.ok_btn.setEnabled(have_workspace)
         
         
         

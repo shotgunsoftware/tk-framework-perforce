@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>487</width>
-    <height>222</height>
+    <width>445</width>
+    <height>238</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
    <property name="spacing">
     <number>4</number>
    </property>
@@ -21,126 +21,140 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="leftMargin">
-      <number>0</number>
+    <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,0,0,1">
+     <property name="spacing">
+      <number>10</number>
      </property>
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="minimumSize">
-        <size>
-         <width>60</width>
-         <height>60</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>60</width>
-         <height>60</height>
-        </size>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="pixmap">
-        <pixmap resource="resources.qrc">:/res/p4_icon.png</pixmap>
-       </property>
-       <property name="scaledContents">
-        <bool>false</bool>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Enter your connection settings...</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QGridLayout" name="gridLayout">
      <property name="leftMargin">
+      <number>12</number>
+     </property>
+     <property name="topMargin">
       <number>12</number>
      </property>
      <property name="rightMargin">
       <number>12</number>
      </property>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="user_browse_btn">
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label_6">
        <property name="text">
-        <string>Browse...</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:large;&quot;&gt;Your Perforce connection settings are:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_2">
+     <item>
+      <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,0" columnstretch="0,1" rowminimumheight="0,0" columnminimumwidth="80,0">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Host:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="host_label">
+         <property name="text">
+          <string>[server]:[port]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>User:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="user_label">
+         <property name="text">
+          <string>[user]</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Fixed</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>1</width>
+         <height>12</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_12">
        <property name="text">
-        <string>Workspace:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:large;&quot;&gt;Please choose a Workspace to use for this connection:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Server:</string>
+     <item>
+      <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,1,0" rowminimumheight="0" columnminimumwidth="80,0,0">
+       <property name="leftMargin">
+        <number>0</number>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       <property name="rightMargin">
+        <number>0</number>
        </property>
-      </widget>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="workspace_edit"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Workspace:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="workspace_browse_btn">
+         <property name="text">
+          <string>Browse...</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
-     <item row="2" column="3">
-      <widget class="QPushButton" name="workspace_browse_btn">
-       <property name="text">
-        <string>Browse...</string>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
        </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QLineEdit" name="workspace_edit"/>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>User:</string>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QLineEdit" name="user_edit"/>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLineEdit" name="server_edit">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
+      </spacer>
      </item>
     </layout>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>81</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item>
     <widget class="Line" name="break_line">
@@ -180,7 +194,7 @@
       <widget class="QPushButton" name="cancel_btn">
        <property name="minimumSize">
         <size>
-         <width>90</width>
+         <width>100</width>
          <height>0</height>
         </size>
        </property>
@@ -193,12 +207,12 @@
       <widget class="QPushButton" name="ok_btn">
        <property name="minimumSize">
         <size>
-         <width>90</width>
+         <width>100</width>
          <height>0</height>
         </size>
        </property>
        <property name="text">
-        <string>Ok</string>
+        <string>Connect</string>
        </property>
        <property name="default">
         <bool>true</bool>
@@ -210,11 +224,6 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>server_edit</tabstop>
-  <tabstop>user_edit</tabstop>
-  <tabstop>user_browse_btn</tabstop>
-  <tabstop>workspace_edit</tabstop>
-  <tabstop>workspace_browse_btn</tabstop>
   <tabstop>cancel_btn</tabstop>
   <tabstop>ok_btn</tabstop>
  </tabstops>

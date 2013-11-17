@@ -10,3 +10,4 @@
 
 from .open_connection_form import OpenConnectionForm
 from .password_form import PasswordForm
+from .select_workspace_form import SelectWorkspaceForm

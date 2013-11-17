@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-# 
 # Copyright (c) 2013 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
@@ -9,11 +7,6 @@
 # By accessing, using, copying or modifying this work you indicate your 
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
-
-#import os
-#import sys
-#import tempfile
-#import subprocess
 
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
@@ -27,7 +20,13 @@ class PasswordForm(QtGui.QWidget):
     def exit_code(self):
         return self._exit_code
     
-    def __init__(self, parent=None):
+    @property
+    def hide_tk_title_bar(self):
+        return True    
+    
+    show_details_clicked = QtCore.Signal(QtGui.QWidget)
+    
+    def __init__(self, show_details_btn=False, error_msg = None, parent=None):
         """
         Construction
         """
@@ -36,9 +35,14 @@ class PasswordForm(QtGui.QWidget):
         self.__ui = Ui_PasswordForm()
         self.__ui.setupUi(self)
         
+        self.__ui.details_btn.setVisible(show_details_btn)
+        
+        self.__ui.invalid_label.setVisible(error_msg is not None)
+        self.__ui.invalid_label.setText(error_msg)
         
         self.__ui.cancel_btn.clicked.connect(self._on_cancel)
         self.__ui.ok_btn.clicked.connect(self._on_ok)
+        self.__ui.details_btn.clicked.connect(self._on_show_details)
     
     @property
     def password(self):
@@ -55,3 +59,10 @@ class PasswordForm(QtGui.QWidget):
         """
         self._exit_code = QtGui.QDialog.Accepted
         self.close()
+        
+    def _on_show_details(self):
+        """
+        """
+        self.show_details_clicked.emit(self)
+        
+        

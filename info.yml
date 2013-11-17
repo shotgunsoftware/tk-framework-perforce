@@ -21,6 +21,11 @@ configuration:
         description: Port on perforce server to connect to
         default_value: 1666
 
+    hook_get_perforce_user:
+        type: hook
+        parameters: [sg_user]
+        default_value: get_perforce_user
+
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
         
