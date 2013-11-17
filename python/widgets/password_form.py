@@ -26,7 +26,7 @@ class PasswordForm(QtGui.QWidget):
     
     show_details_clicked = QtCore.Signal(QtGui.QWidget)
     
-    def __init__(self, show_details_btn=False, error_msg = None, parent=None):
+    def __init__(self, server, port, user, show_details_btn=False, error_msg = None, parent=None):
         """
         Construction
         """
@@ -34,6 +34,10 @@ class PasswordForm(QtGui.QWidget):
         
         self.__ui = Ui_PasswordForm()
         self.__ui.setupUi(self)
+        
+        self.__ui.details_label.setText(("Please enter the password required for user '%s' " 
+                                        "to log in to the Perforce server '%s:%d'") 
+                                        % (user, server, port))
         
         self.__ui.details_btn.setVisible(show_details_btn)
         
@@ -43,6 +47,7 @@ class PasswordForm(QtGui.QWidget):
         self.__ui.cancel_btn.clicked.connect(self._on_cancel)
         self.__ui.ok_btn.clicked.connect(self._on_ok)
         self.__ui.details_btn.clicked.connect(self._on_show_details)
+        
     
     @property
     def password(self):

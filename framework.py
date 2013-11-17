@@ -39,6 +39,8 @@ class PerforceFramework(tank.platform.Framework):
         return util.connect(self)
         
     def connect_with_dlg(self):
+        """
+        """
         util = self.import_module("util")
         return util.connect_with_dlg(self)
         

@@ -186,6 +186,8 @@ class ConnectionHandler(object):
 
     @property
     def connection(self):
+        """
+        """
         return self._p4
 
     def disconnect(self):
@@ -221,7 +223,7 @@ class ConnectionHandler(object):
         self._p4 = p4
         return self._p4
 
-    def login_user(self, user):
+    def login_user(self, user, parent_widget=None):
         """
         Log-in the specified Perforce user if required.
         """
@@ -233,29 +235,32 @@ class ConnectionHandler(object):
         
         login_req = self._login_required()
         if login_req:
-            # prompt for password:
-            # ...
-            error_msg = None
-            
-            while True:
-                pw = self.prompt_for_password(error_msg)
-                if pw == None:
-                    # User hit cancel!
-                    raise TankError("Unable to login user %s without a password!" % user)
-
-                try:
-                    # attempt to log-in using this password
-                    self._p4.password = pw
-                    self._p4.run_login()
-                except P4Exception:
-                    self._error_handler.log(self._p4)
-                    
-                    # update the error message and try again:
-                    error_msg = "Log-in failed: %s" % (self._p4.errors or self._p4.warnings or [""])[0]
-                    continue
-                else:
-                    # successfully logged in!
-                    break
+            if self._fw.engine.has_ui:
+                # prompt for password:
+                error_msg = None
+                while True:
+                    pw = self.prompt_for_password(error_msg, parent_widget)
+                    if pw == None:
+                        # User hit cancel!
+                        raise TankError("Perforce: Unable to login user %s without a password!" % user)
+    
+                    try:
+                        # attempt to log-in using this password
+                        self._fw.log_debug("Attempting to log-in user %s" % user)
+                        self._p4.password = pw
+                        self._p4.run_login()
+                    except P4Exception:
+                        self._error_handler.log(self._p4)
+                        
+                        # update the error message and try again:
+                        error_msg = "Log-in failed: %s" % (self._p4.errors or self._p4.warnings or [""])[0]
+                        continue
+                    else:
+                        # successfully logged in!
+                        break
+            else:
+                # no UI so just raise error:
+                raise TankError("Perforce: Unable to login user %s without a password!" % user)
         
     def prompt_for_password(self, error_msg, parent_widget=None):
         """
@@ -268,8 +273,9 @@ class ConnectionHandler(object):
             
             # show the password entry dialog:
             p4_widgets = self._fw.import_module("widgets")
-            res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm, False, error_msg, 
-                                                     parent_widget)
+            res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
+                                                     self._p4.host, int(self._p4.port), self._p4.user, 
+                                                     (parent_widget == None), error_msg, parent_widget)
             if res == QtGui.QDialog.Accepted:
                 return widget.password
             
@@ -318,16 +324,28 @@ class ConnectionHandler(object):
         port = self._fw.get_setting("port")
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
         workspace = self._get_last_workspace()
-    
-    def _get_last_workspace(self):
-        """
-        """
-        return "ad_zombie_racer"
-    
-    def _save_last_workspace(self):
-        """
-        """
-        pass  
+
+        try:
+            # first, attempt to connect to the server:port:
+            self.connect_to_server(host, port)
+            
+            # next, log-in:
+            self.login_user(user)
+            
+            # finally, validate the workspace:
+            self._validate_workspace(user, workspace)
+            self._p4.client = str(workspace)
+            
+            return self._p4
+            
+        except TankError, e:
+            # failed to connect to server - switch to UI mode
+            # if available instead:
+            if self._fw.engine.has_ui:
+                # just show the connection UI instead:
+                return self.connect_with_dlg()
+            else:
+                raise
         
     def connect_with_dlg(self):
         """
@@ -348,7 +366,7 @@ class ConnectionHandler(object):
             p4_widgets = self._fw.import_module("widgets")
         
             # get initial user & workspace from settings:    
-            initial_workspace = ""
+            initial_workspace = self._get_last_workspace()
             
             # show the connection dialog:
             result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, p4_widgets.OpenConnectionForm, host, 
@@ -375,7 +393,7 @@ class ConnectionHandler(object):
 
         # make sure the current user is logged in:        
         try:
-            self.login_user(widget.user)
+            self.login_user(widget.user, widget)
         except TankError, e:
             # likely that the user isn't valid!
             QtGui.QMessageBox.information(widget, "Failed to log-in!", "%s" % e)
@@ -394,7 +412,7 @@ class ConnectionHandler(object):
         
         # make sure the current user is logged in:        
         try:
-            self.login_user(widget.user)
+            self.login_user(widget.user, widget)
         except TankError, e:
             # likely that the user isn't valid!
             QtGui.QMessageBox.information(widget, "Failed to log-in!", "%s" % e)
@@ -402,13 +420,24 @@ class ConnectionHandler(object):
         
         # make sure the workspace is valid:
         try:
-            self._validate_workspace(widget.user, widget.workspace)        
+            self._validate_workspace(widget.user, widget.workspace)
+            self._p4.client = widget.workspace   
         except TankError, e:
             QtGui.QMessageBox.information(widget, "Invalid Workspace!", "%s" % e)
             return
         
         # success so lets close the widget!
         widget.close()
+    
+    def _get_last_workspace(self):
+        """
+        """
+        return "ad_zombie_racer"
+    
+    def _save_last_workspace(self):
+        """
+        """
+        pass 
 
     def _validate_workspace(self, user, workspace):
         """
@@ -478,7 +507,11 @@ def connect_with_dlg(fw):
     handler = ConnectionHandler(fw)
     return handler.connect_with_dlg()
     
-    
+def connect(fw):
+    """
+    """
+    handler = ConnectionHandler(fw)
+    return handler.connect()
     
 
 

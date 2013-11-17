@@ -11,7 +11,7 @@ from tank.platform.qt import QtCore, QtGui
 class Ui_OpenConnectionForm(object):
     def setupUi(self, OpenConnectionForm):
         OpenConnectionForm.setObjectName("OpenConnectionForm")
-        OpenConnectionForm.resize(445, 238)
+        OpenConnectionForm.resize(461, 238)
         self.verticalLayout = QtGui.QVBoxLayout(OpenConnectionForm)
         self.verticalLayout.setSpacing(4)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -100,10 +100,10 @@ class Ui_OpenConnectionForm(object):
         self.host_label.setText(QtGui.QApplication.translate("OpenConnectionForm", "[server]:[port]", None, QtGui.QApplication.UnicodeUTF8))
         self.label_9.setText(QtGui.QApplication.translate("OpenConnectionForm", "User:", None, QtGui.QApplication.UnicodeUTF8))
         self.user_label.setText(QtGui.QApplication.translate("OpenConnectionForm", "[user]", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_12.setText(QtGui.QApplication.translate("OpenConnectionForm", "<html><head/><body><p><span style=\" font-size:large;\">Please choose a Workspace to use for this connection:</span></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_12.setText(QtGui.QApplication.translate("OpenConnectionForm", "<html><head/><body><p><span style=\" font-size:large;\">The Workspace you are using for this connection is:</span></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
         self.label_7.setText(QtGui.QApplication.translate("OpenConnectionForm", "Workspace:", None, QtGui.QApplication.UnicodeUTF8))
         self.workspace_browse_btn.setText(QtGui.QApplication.translate("OpenConnectionForm", "Browse...", None, QtGui.QApplication.UnicodeUTF8))
         self.cancel_btn.setText(QtGui.QApplication.translate("OpenConnectionForm", "Cancel", None, QtGui.QApplication.UnicodeUTF8))
-        self.ok_btn.setText(QtGui.QApplication.translate("OpenConnectionForm", "Connect", None, QtGui.QApplication.UnicodeUTF8))
+        self.ok_btn.setText(QtGui.QApplication.translate("OpenConnectionForm", "Ok", None, QtGui.QApplication.UnicodeUTF8))
 
 from . import resources_rc
