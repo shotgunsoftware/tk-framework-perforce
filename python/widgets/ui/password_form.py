@@ -11,7 +11,7 @@ from tank.platform.qt import QtCore, QtGui
 class Ui_PasswordForm(object):
     def setupUi(self, PasswordForm):
         PasswordForm.setObjectName("PasswordForm")
-        PasswordForm.resize(404, 162)
+        PasswordForm.resize(381, 162)
         self.verticalLayout = QtGui.QVBoxLayout(PasswordForm)
         self.verticalLayout.setSpacing(4)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -70,7 +70,7 @@ class Ui_PasswordForm(object):
 
     def retranslateUi(self, PasswordForm):
         PasswordForm.setWindowTitle(QtGui.QApplication.translate("PasswordForm", "Form", None, QtGui.QApplication.UnicodeUTF8))
-        self.details_label.setText(QtGui.QApplication.translate("PasswordForm", "Please enter the Perforce password to use for user \'[user]\' on server [server]:[port]", None, QtGui.QApplication.UnicodeUTF8))
+        self.details_label.setText(QtGui.QApplication.translate("PasswordForm", "Please enter the password required for user \'\' to connect to the Perforce server \'\'", None, QtGui.QApplication.UnicodeUTF8))
         self.invalid_label.setText(QtGui.QApplication.translate("PasswordForm", "Log-in failed: Password Incorrect", None, QtGui.QApplication.UnicodeUTF8))
         self.details_btn.setText(QtGui.QApplication.translate("PasswordForm", "Show Details...", None, QtGui.QApplication.UnicodeUTF8))
         self.cancel_btn.setText(QtGui.QApplication.translate("PasswordForm", "Cancel", None, QtGui.QApplication.UnicodeUTF8))

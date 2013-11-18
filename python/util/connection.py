@@ -20,163 +20,8 @@ from sgtk.platform.qt import QtGui, QtCore
 
 from P4 import P4, P4Exception
 
-from .errors import log_warnings_and_errors, ErrorHandler
-
-
-#def _load_user_details():
-#    """
-#    """
-#    settings = QtCore.QSettings("Shotgun Software", "tk-framework-perforce")
-#    
-#    user_details = {}
-#    
-#    array_sz = settings.beginReadArray("user_connection_details")
-#    for ai in range(0, array_sz):
-#        settings.setArrayIndex(ai):
-#        project_id = settings.value("project_id").toInt()
-#        user = settings.value("user").toString()
-#        client = settings.value("client").toString()
-#        
-#        user_details[project_id] = {"user":user, "client":client}
-#        
-#    settings.endArray()
-#    
-#    return user_details
-#
-#
-#def _save_user_details(user_details):
-#    """
-#    """
-#    settings = QtCore.QSettings("Shotgun Software", "tk-framework-perforce")
-#    
-#    settings.beginWriteArray("user_connection_details")
-#    
-#    for ai, (project_id, details) in enumerate(user_details.iteritems()):
-#        settings.setArrayIndex(ai)
-#        
-#        settings.setValue("project_id", project_id)
-#        settings.setValue("user", details.get("user", ""))
-#        settings.setValue("client", details.get("client", ""))
-#        
-#    settings.endArray()
-    
-
-def _load_user_config():
-    """
-    (AD) - TEMP
-    """
-    config = {"user":"Alan", "client":"ad_zombie_racer"}
-    
-    # load in any missing pieces from environment if they've
-    # been defined
-    os_lookup = {"user":"P4USER", "client":"P4CLIENT"}
-    for key, env_var in os_lookup.iteritems():
-        if key not in config:
-            env_val = os.environ.get(env_var)
-            if env_val:
-                config[key] = env_val
-    
-    return config
-
-def _login_required(p4, fw, min_timeout=300):
-    """
-    Determine if login is required for the current user
-    """
-    # first, check to see if the user is required to log in:
-    users = []
-    try:
-        # This will raise a P4Exception if the user isn't valid:
-        users = p4.run_users(p4.user)
-    except P4Exception:
-        log_warnings_and_errors(fw, p4)
-        raise TankError("Perforce: Failed to query user info from server for user '%s' - '%s'" 
-                            % (p4.user, (p4.errors or p4.warnings or [""])[0]))
-
-    # users = [...{'Password': 'enabled'}...]
-    if not users[0].get("Password") == "enabled":
-        return False
-    
-    # get the list of tickets for the current user
-    try:
-        p4_res = p4.run_login("-s")
-        if not p4_res:
-            # no ticket so login required
-            return True
-    except P4Exception:
-        # exception raised because user isn't logged in!
-        # (AD) - are there other exceptions that could be raised?
-        return True
-        
-    # p4_res is of the form:
-    # [{'TicketExpiration': '43026', 'User': 'Alan'}]        
-    for ticket_status in p4_res:
-        timeout = 0
-        try:
-            timeout = int(ticket_status.get("TicketExpiration", "0"))
-        except ValueError:
-            timeout=0
-        if timeout >= min_timeout:
-            # user is logged in and has enough 
-            # time remaining
-            return False
-
-    # user isn't logged in!
-    return True
-
-def connect(fw):
-    """
-    Open a connection using the configured settings, prompting
-    the user if required. 
-    """
-    # create new P4 instance 
-    p4 = P4()
-
-    # load the server configuration:
-    p4.host = fw.get_setting("host")
-    p4.port = str(fw.get_setting("port"))
-
-    # attempt to connect to the server:
-    host_port = ":".join([item for item in [p4.host, p4.port] if item])
-    try:
-        fw.log_debug("Attempting to connect to %s" % host_port)
-        p4.connect()
-    except P4Exception, e:
-        log_warnings_and_errors(fw, p4)
-        raise TankError("Perforce: Failed to connect to %s - '%s'" % (host_port, (p4.errors or p4.warnings or [""])[0]))
-        
-    # next, get the user config:
-    user_config = _load_user_config()
-    p4.user = user_config.get("user", "")
-    
-    # See if the user needs to log-in:
-    login_req = _login_required(p4, fw)
-    if login_req:
-        fw.log_debug("Logging in user '%s'" % p4.user)
-        p4.password = "spiders"
-        try:
-            p4.run_login()
-        except P4Exception:
-            log_warnings_and_errors(fw, p4)
-            raise TankError("Perforce: Failed to login user %s - '%s'" % (p4.user, (p4.errors or p4.warnings or [""])[0]))    
-            
-    # Finally, get the client:
-    p4.client = user_config.get("client", "")
-
-    # and validate:    
-    clients = []
-    try:
-        clients = p4.run_clients("-u", p4.user)
-    except P4Exception:
-        log_warnings_and_errors(fw, p4)
-        raise TankError("Perforce: Failed to query clients for user %s - '%s'" % (p4.user, (p4.errors or p4.warnings or [""])[0]))
-    
-    client_names = [client["client"] for client in clients]
-    if p4.client not in client_names:
-        raise TankError("Perforce: Client '%s' does not exist for user '%s'" % (p4.client, p4.user))
-    
-    # all good!    
-    return p4
-
+from .errors import ErrorHandler
+from .user_settings import UserSettings
     
 class ConnectionHandler(object):
     def __init__(self, fw):
@@ -217,7 +62,6 @@ class ConnectionHandler(object):
             p4.connect()
         except P4Exception, e:
             self._error_handler.log(p4)
-            #log_warnings_and_errors(self._fw, p4)
             raise TankError("Perforce: Failed to connect to %s - '%s'" % (host_port, (p4.errors or p4.warnings or [""])[0]))
         
         self._p4 = p4
@@ -230,59 +74,57 @@ class ConnectionHandler(object):
         if not self._p4 or not self._p4.connected():
             raise TankError("Perforce: Unable to log user in without an open Perforce connection!")
         
-        # set the current p4 user:
+        # check that user is valid:
+        self._validate_user(user)
         self._p4.user = str(user)
         
         login_req = self._login_required()
         if login_req:
-            if self._fw.engine.has_ui:
-                # prompt for password:
-                error_msg = None
-                while True:
-                    pw = self.prompt_for_password(error_msg, parent_widget)
-                    if pw == None:
-                        # User hit cancel!
-                        raise TankError("Perforce: Unable to login user %s without a password!" % user)
-    
-                    try:
-                        # attempt to log-in using this password
-                        self._fw.log_debug("Attempting to log-in user %s" % user)
-                        self._p4.password = pw
-                        self._p4.run_login()
-                    except P4Exception:
-                        self._error_handler.log(self._p4)
-                        
-                        # update the error message and try again:
-                        error_msg = "Log-in failed: %s" % (self._p4.errors or self._p4.warnings or [""])[0]
-                        continue
-                    else:
-                        # successfully logged in!
-                        break
-            else:
-                # no UI so just raise error:
+            if self._do_login(parent_widget) != True:
                 raise TankError("Perforce: Unable to login user %s without a password!" % user)
         
-    def prompt_for_password(self, error_msg, parent_widget=None):
+    def _do_login(self, parent_widget=None):
         """
-        Prompt the user to enter the password required by Perforce.
-        
-        :return: String - the password the user entered or None if they
-                 cancelled entry
+        :return: Bool - True if the user successfully logged in, False otherwise 
         """
-        try:
+        if self._fw.engine.has_ui:
             
-            # show the password entry dialog:
-            p4_widgets = self._fw.import_module("widgets")
-            res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
-                                                     self._p4.host, int(self._p4.port), self._p4.user, 
-                                                     (parent_widget == None), error_msg, parent_widget)
-            if res == QtGui.QDialog.Accepted:
-                return widget.password
-            
-        except TankError, e:
-            pass
-        
-        return None
+            # prompt for password:
+            error_msg = None
+            while True:
+                # show the password entry dialog:
+                p4_widgets = self._fw.import_module("widgets")
+                res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
+                                                         self._p4.host, int(self._p4.port), self._p4.user, 
+                                                         (parent_widget == None), error_msg, parent_widget)
+                
+                if res == p4_widgets.PasswordForm.SHOW_DETAILS:
+                    # show the connection dlg instead:
+                    return res
+                elif res != QtGui.QDialog.Accepted:
+                    # User hit cancel!
+                    return False
+                
+                pw = widget.password
+                
+                try:
+                    # attempt to log-in using this password
+                    self._fw.log_debug("Attempting to log-in user %s" % self._p4.user)
+                    self._p4.password = pw
+                    self._p4.run_login()
+                except P4Exception:
+                    self._error_handler.log(self._p4)
+                    
+                    # update the error message and try again:
+                    error_msg = "Log-in failed: %s" % (self._p4.errors or self._p4.warnings or [""])[0]
+                    continue
+                else:
+                    # successfully logged in!
+                    return True
+                
+        else:
+            # no UI so just raise error:
+            raise TankError("Perforce: Unable to login user %s without a password!" % self._p4.user)
     
     def prompt_for_workspace(self, user, initial_ws, parent_widget=None):
         """
@@ -323,17 +165,30 @@ class ConnectionHandler(object):
         host = self._fw.get_setting("host")
         port = self._fw.get_setting("port")
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
-        workspace = self._get_last_workspace()
+        workspace = self._get_current_workspace()
 
         try:
             # first, attempt to connect to the server:port:
             self.connect_to_server(host, port)
             
-            # next, log-in:
-            self.login_user(user)
+            # validate user:
+            self._validate_user(user)
+            self._p4.user = user
+            
+            # if log-in is required then log-in:
+            login_req = self._login_required()
+            if login_req:
+                res = self._do_login()
+                p4_widgets = self._fw.import_module("widgets")
+                if res == p4_widgets.PasswordForm.SHOW_DETAILS:
+                    # switch to connection dialog
+                    raise TankError()
+                elif not res:
+                    # user cancelled log-in!
+                    return
             
             # finally, validate the workspace:
-            self._validate_workspace(user, workspace)
+            self._validate_workspace(workspace, user)
             self._p4.client = str(workspace)
             
             return self._p4
@@ -345,6 +200,7 @@ class ConnectionHandler(object):
                 # just show the connection UI instead:
                 return self.connect_with_dlg()
             else:
+                # re-raise the last exception:
                 raise
         
     def connect_with_dlg(self):
@@ -366,7 +222,7 @@ class ConnectionHandler(object):
             p4_widgets = self._fw.import_module("widgets")
         
             # get initial user & workspace from settings:    
-            initial_workspace = self._get_last_workspace()
+            initial_workspace = self._get_current_workspace()
             
             # show the connection dialog:
             result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, p4_widgets.OpenConnectionForm, host, 
@@ -374,6 +230,7 @@ class ConnectionHandler(object):
            
             if result == QtGui.QDialog.Accepted:
                 # all good so return the p4 object:
+                self._save_current_workspace(self._p4.client)
                 return self._p4
 
         except:
@@ -420,7 +277,7 @@ class ConnectionHandler(object):
         
         # make sure the workspace is valid:
         try:
-            self._validate_workspace(widget.user, widget.workspace)
+            self._validate_workspace(widget.workspace, widget.user)
             self._p4.client = widget.workspace   
         except TankError, e:
             QtGui.QMessageBox.information(widget, "Invalid Workspace!", "%s" % e)
@@ -429,17 +286,23 @@ class ConnectionHandler(object):
         # success so lets close the widget!
         widget.close()
     
-    def _get_last_workspace(self):
+    def _get_current_workspace(self):
         """
         """
-        return "ad_zombie_racer"
+        if self._fw.context.project:
+            settings = UserSettings("user_details")
+            return settings.get_client(self._fw.context.project["id"])
+        else:
+            return ""
     
-    def _save_last_workspace(self):
+    def _save_current_workspace(self, workspace):
         """
         """
-        pass 
+        if self._fw.context.project:
+            settings = UserSettings("user_details")
+            return settings.set_client(self._fw.context.project["id"], workspace) 
 
-    def _validate_workspace(self, user, workspace):
+    def _validate_workspace(self, workspace, user):
         """
         """
         try:
@@ -454,6 +317,22 @@ class ConnectionHandler(object):
         if user not in ws_users:
             raise TankError("Workspace '%s' is not owned by user '%s'" % (workspace, user))
 
+    def _validate_user(self, user):
+        """
+        """
+        # first, check to see if the user is required to log in:
+        users = []
+        try:
+            users = self._p4.run_users()
+        except P4Exception:
+            self._error_handler.log(self._p4)
+            raise TankError("Perforce: Failed to query users from server - '%s'" 
+                                % ((self._p4.errors or self._p4.warnings or [""])[0]))
+            
+        user_names = [p4_user["User"] for p4_user in users]
+        if not user in user_names:
+            raise TankError("User '%s' is not a valid user")        
+
     def _login_required(self, min_timeout=300):
         """
         Determine if the specified user is required to log in.
@@ -465,7 +344,6 @@ class ConnectionHandler(object):
             users = self._p4.run_users(self._p4.user)
         except P4Exception:
             self._error_handler.log(self._p4)
-            #log_warnings_and_errors(fw, p4)
             raise TankError("Perforce: Failed to query user info from server for user '%s' - '%s'" 
                                 % (self._p4.user, (self._p4.errors or self._p4.warnings or [""])[0]))
     

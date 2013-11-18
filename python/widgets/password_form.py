@@ -24,7 +24,9 @@ class PasswordForm(QtGui.QWidget):
     def hide_tk_title_bar(self):
         return True    
     
-    show_details_clicked = QtCore.Signal(QtGui.QWidget)
+    #show_details_clicked = QtCore.Signal(QtGui.QWidget)
+    
+    SHOW_DETAILS = 2
     
     def __init__(self, server, port, user, show_details_btn=False, error_msg = None, parent=None):
         """
@@ -68,6 +70,9 @@ class PasswordForm(QtGui.QWidget):
     def _on_show_details(self):
         """
         """
-        self.show_details_clicked.emit(self)
+        self._exit_code = PasswordForm.SHOW_DETAILS
+        self.close()
+        
+        #self.show_details_clicked.emit(self)
         
         

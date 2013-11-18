@@ -107,7 +107,7 @@
      <item>
       <widget class="QLabel" name="label_12">
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:large;&quot;&gt;The Workspace you are using for this connection is:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:large;&quot;&gt;Choose the Workspace to use for this connection:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -212,7 +212,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Ok</string>
+        <string>Connect</string>
        </property>
        <property name="default">
         <bool>true</bool>
