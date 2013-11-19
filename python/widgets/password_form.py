@@ -18,14 +18,15 @@ class PasswordForm(QtGui.QWidget):
     
     @property
     def exit_code(self):
+        # expose the exit code in an sgtk friendly way
         return self._exit_code
     
     @property
     def hide_tk_title_bar(self):
+        # disable the sgtk dialog title bar
         return True    
     
-    #show_details_clicked = QtCore.Signal(QtGui.QWidget)
-    
+    # exit code returned when the 'show details' button is pressed
     SHOW_DETAILS = 2
     
     def __init__(self, server, port, user, show_details_btn=False, error_msg = None, parent=None):
@@ -34,6 +35,7 @@ class PasswordForm(QtGui.QWidget):
         """
         QtGui.QWidget.__init__(self, parent)
         
+        # setup ui
         self.__ui = Ui_PasswordForm()
         self.__ui.setupUi(self)
         
@@ -50,10 +52,25 @@ class PasswordForm(QtGui.QWidget):
         self.__ui.ok_btn.clicked.connect(self._on_ok)
         self.__ui.details_btn.clicked.connect(self._on_show_details)
         
-    
+        self.__ui.password_edit.installEventFilter(self)
+        
     @property
     def password(self):
         return str(self.__ui.password_edit.text())
+
+    def eventFilter(self, q_object, event):
+        """
+        Custom event filter to filter enter-key press events from the password edit
+        """
+        if q_object == self.__ui.password_edit and event.type() == QtCore.QEvent.KeyPress:
+            # handle key-press event in the workspace list control:
+            if event.key() == QtCore.Qt.Key_Return:
+                # same as pressing ok:
+                self._on_ok()
+                return True
+                
+        # let default handler handle the event:
+        return QtCore.QObject.eventFilter(self, q_object, event)
     
     def _on_cancel(self):
         """

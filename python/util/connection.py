@@ -82,49 +82,6 @@ class ConnectionHandler(object):
         if login_req:
             if self._do_login(parent_widget) != True:
                 raise TankError("Perforce: Unable to login user %s without a password!" % user)
-        
-    def _do_login(self, parent_widget=None):
-        """
-        :return: Bool - True if the user successfully logged in, False otherwise 
-        """
-        if self._fw.engine.has_ui:
-            
-            # prompt for password:
-            error_msg = None
-            while True:
-                # show the password entry dialog:
-                p4_widgets = self._fw.import_module("widgets")
-                res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
-                                                         self._p4.host, int(self._p4.port), self._p4.user, 
-                                                         (parent_widget == None), error_msg, parent_widget)
-                
-                if res == p4_widgets.PasswordForm.SHOW_DETAILS:
-                    # show the connection dlg instead:
-                    return res
-                elif res != QtGui.QDialog.Accepted:
-                    # User hit cancel!
-                    return False
-                
-                pw = widget.password
-                
-                try:
-                    # attempt to log-in using this password
-                    self._fw.log_debug("Attempting to log-in user %s" % self._p4.user)
-                    self._p4.password = pw
-                    self._p4.run_login()
-                except P4Exception:
-                    self._error_handler.log(self._p4)
-                    
-                    # update the error message and try again:
-                    error_msg = "Log-in failed: %s" % (self._p4.errors or self._p4.warnings or [""])[0]
-                    continue
-                else:
-                    # successfully logged in!
-                    return True
-                
-        else:
-            # no UI so just raise error:
-            raise TankError("Perforce: Unable to login user %s without a password!" % self._p4.user)
     
     def prompt_for_workspace(self, user, initial_ws, parent_widget=None):
         """
@@ -202,7 +159,7 @@ class ConnectionHandler(object):
             else:
                 # re-raise the last exception:
                 raise
-        
+
     def connect_with_dlg(self):
         """
         """
@@ -235,6 +192,63 @@ class ConnectionHandler(object):
 
         except:
             self._fw.log_exception("Failed to Open Connection dialog!")
+
+    def _do_login(self, parent_widget=None):
+        """
+        :return: Bool - True if the user successfully logged in, False otherwise 
+        """
+        error_msg = None
+        password = None
+        show_next_error = True
+        
+        # check to see if P4PASSWD is set
+        env_val = os.environ.get("P4PASSWD")
+        if env_val:
+            password = env_val
+            if password:
+                show_next_error = False
+            
+        # loop until we successfully log in or cancel
+        while True:
+            if password:
+                # attempt to log-in using this password
+                try:
+                    self._fw.log_debug("Attempting to log-in user %s" % self._p4.user)
+                    self._p4.password = password
+                    self._p4.run_login()
+                except P4Exception:
+                    self._error_handler.log(self._p4)
+
+                    # update the error message and try again:
+                    if show_next_error:
+                        error_msg = "Log-in failed: %s" % (self._p4.errors or self._p4.warnings or [""])[0]
+                    else:
+                        show_next_error = True
+                else:
+                    # successfully logged in!
+                    return True
+            
+            if self._fw.engine.has_ui:
+            
+                # show the password entry dialog:
+                p4_widgets = self._fw.import_module("widgets")
+                res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
+                                                         self._p4.host, int(self._p4.port), self._p4.user, 
+                                                         (parent_widget == None), error_msg, parent_widget)
+                
+                if res == p4_widgets.PasswordForm.SHOW_DETAILS:
+                    # just return the result:
+                    return res
+                elif res != QtGui.QDialog.Accepted:
+                    # User hit cancel!
+                    return False
+
+                # keep track of password for next iteration:                
+                password = widget.password
+            
+            else:
+                # no UI so just raise error:
+                raise TankError("Perforce: Unable to login user %s without a password!" % self._p4.user)
     
     def _setup_connection_dlg(self, widget):
         """
@@ -289,11 +303,18 @@ class ConnectionHandler(object):
     def _get_current_workspace(self):
         """
         """
+        workspace = ""
         if self._fw.context.project:
             settings = UserSettings("user_details")
-            return settings.get_client(self._fw.context.project["id"])
-        else:
-            return ""
+            workspace = settings.get_client(self._fw.context.project["id"])
+        
+        if not workspace:
+            # see if P4CLIENT is set in the environment:
+            env_val = os.environ.get("P4CLIENT")
+            if env_val:
+                workspace = env_val
+                
+        return workspace
     
     def _save_current_workspace(self, workspace):
         """

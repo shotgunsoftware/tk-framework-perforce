@@ -44,6 +44,8 @@ class OpenConnectionForm(QtGui.QWidget):
         self.__ui.cancel_btn.clicked.connect(self._on_cancel)
         self.__ui.workspace_browse_btn.clicked.connect(self._on_browse_workspace)
         self.__ui.workspace_edit.textEdited.connect(self._on_edit_changed)
+
+        self.__ui.workspace_edit.installEventFilter(self)
         
         server_string = "%s:%d" % (self._server, self._port)
         self.__ui.host_label.setText(server_string)
@@ -79,6 +81,20 @@ class OpenConnectionForm(QtGui.QWidget):
         self._update_ui()
     workspace = property(_get_workspace, _set_workspace)
     
+    def eventFilter(self, q_object, event):
+        """
+        Custom event filter to filter enter-key press events from the workspace edit
+        """
+        if q_object == self.__ui.workspace_edit and event.type() == QtCore.QEvent.KeyPress:
+            # handle key-press event in the workspace list control:
+            if event.key() == QtCore.Qt.Key_Return and self.workspace:
+                # same as pressing ok:
+                self._on_ok()
+                return True
+                
+        # let default handler handle the event:
+        return QtCore.QObject.eventFilter(self, q_object, event)    
+    
     def _on_cancel(self):
         """
         Called when the cancel button is clicked
@@ -93,7 +109,6 @@ class OpenConnectionForm(QtGui.QWidget):
         self._exit_code = QtGui.QDialog.Accepted
         self.open_clicked.emit(self)
         self._exit_code = QtGui.QDialog.Rejected
-        #self.close()
         
     def _on_browse_workspace(self):
         """
