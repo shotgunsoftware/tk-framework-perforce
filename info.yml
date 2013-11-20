@@ -1,0 +1,41 @@
+# Copyright (c) 2013 Shotgun Software Inc.
+# 
+# CONFIDENTIAL AND PROPRIETARY
+# 
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+# Source Code License included in this distribution package. See LICENSE.
+# By accessing, using, copying or modifying this work you indicate your 
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# not expressly granted therein are reserved by Shotgun Software Inc.
+
+# Metadata defining the behaviour and requirements for this framework
+
+# expected fields in the configuration file for this engine
+configuration:
+    host:
+        type: str
+        description: Perforce server to connect to
+        
+    port:
+        type: int
+        description: Port on perforce server to connect to
+        default_value: 1666
+
+    hook_get_perforce_user:
+        type: hook
+        parameters: [sg_user]
+        default_value: get_perforce_user
+
+# the Shotgun fields that this engine needs in order to operate correctly
+requires_shotgun_fields:
+
+# More verbose description of this item 
+display_name: "Perforce Framework"
+description: "Common Perforce functionality used by various apps & hooks"
+
+# Required minimum versions for this item to run
+requires_shotgun_version:
+requires_core_version: "v0.12.14"
+
+ 
+        
