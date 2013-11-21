@@ -9,5 +9,5 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from .connection import connect, connect_with_dlg
-
+from .files import get_client_file_details, get_depot_file_details
 
