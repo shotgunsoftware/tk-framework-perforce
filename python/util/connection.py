@@ -119,7 +119,7 @@ class ConnectionHandler(object):
         """
         # ensure that the connect method is called from the main thread
         # as it may need to present UI to the user:
-        return self._fw.engine.execute_on_main_thread(self._connect)
+        return self._fw.engine.execute_in_main_thread(self._connect)
         
     def _connect(self):
         """
