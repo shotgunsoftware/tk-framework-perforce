@@ -24,7 +24,7 @@ class OpenConnectionForm(QtGui.QWidget):
     def exit_code(self):
         return self._exit_code
     
-    def __init__(self, server, port, user, workspace="", setup_proc = None, parent=None):
+    def __init__(self, server, user, workspace="", setup_proc = None, parent=None):
         """
         Construction
         """
@@ -32,7 +32,6 @@ class OpenConnectionForm(QtGui.QWidget):
         
         self._exit_code = QtGui.QDialog.Rejected
         self._server = server
-        self._port = port
         self._user = user
         
         # create the UI:
@@ -47,8 +46,7 @@ class OpenConnectionForm(QtGui.QWidget):
 
         self.__ui.workspace_edit.installEventFilter(self)
         
-        server_string = "%s:%d" % (self._server, self._port)
-        self.__ui.host_label.setText(server_string)
+        self.__ui.server_label.setText(self._server)
         self.__ui.user_label.setText(self._user)
         
         self.__ui.workspace_edit.setText(workspace)
@@ -63,11 +61,6 @@ class OpenConnectionForm(QtGui.QWidget):
     def server(self):
         return self._server
     
-    # port property
-    @property
-    def port(self):
-        return self._port
-        
     # user property:
     @property
     def user(self):

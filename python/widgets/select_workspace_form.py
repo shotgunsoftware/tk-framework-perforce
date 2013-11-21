@@ -24,7 +24,7 @@ class SelectWorkspaceForm(QtGui.QWidget):
     def hide_tk_title_bar(self):
         return True    
     
-    def __init__(self, server, port, user, workspace_details, current_workspace=None, parent=None):
+    def __init__(self, server, user, workspace_details, current_workspace=None, parent=None):
         """
         Construction
         """
@@ -34,8 +34,8 @@ class SelectWorkspaceForm(QtGui.QWidget):
         self.__ui = Ui_SelectWorkspaceForm()
         self.__ui.setupUi(self)
         
-        self.__ui.details_label.setText("Please choose a Perforce Workspace for user '%s' on server '%s:%d'" 
-                                        % (user, server, port))
+        self.__ui.details_label.setText("Please choose a Perforce Workspace for user '%s' on server '%s'" 
+                                        % (user, server))
         
         self.__ui.cancel_btn.clicked.connect(self._on_cancel)
         self.__ui.ok_btn.clicked.connect(self._on_ok)

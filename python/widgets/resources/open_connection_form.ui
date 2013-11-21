@@ -55,7 +55,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>Host:</string>
+          <string>Server:</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -63,7 +63,7 @@
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QLabel" name="host_label">
+        <widget class="QLabel" name="server_label">
          <property name="text">
           <string>[server]:[port]</string>
          </property>

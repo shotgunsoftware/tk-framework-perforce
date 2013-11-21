@@ -43,26 +43,24 @@ class ConnectionHandler(object):
             self._p4.disconnect()
         self._p4 = None
 
-    def connect_to_server(self, host, port):
+    def connect_to_server(self, server):
         """
-        Open a connection to the server specified by host & port.
+        Open a connection to the specified server.
         Returns a new P4 connection object if successful 
         """
         # create new P4 instance 
         p4 = P4()
     
         # load the server configuration:
-        p4.host = host
-        p4.port = str(port)
+        p4.port = server
     
         # attempt to connect to the server:
-        host_port = ":".join([item for item in [p4.host, p4.port] if item])
         try:
-            self._fw.log_debug("Attempting to connect to %s" % host_port)
+            self._fw.log_debug("Attempting to connect to %s" % server)
             p4.connect()
         except P4Exception, e:
             self._error_handler.log(p4)
-            raise TankError("Perforce: Failed to connect to %s - '%s'" % (host_port, (p4.errors or p4.warnings or [""])[0]))
+            raise TankError("Perforce: Failed to connect to %s - '%s'" % (server, (p4.errors or p4.warnings or [""])[0]))
         
         self._p4 = p4
         return self._p4
@@ -83,7 +81,7 @@ class ConnectionHandler(object):
             if self._do_login(parent_widget) != True:
                 raise TankError("Perforce: Unable to login user %s without a password!" % user)
     
-    def prompt_for_workspace(self, user, initial_ws, parent_widget=None):
+    def _prompt_for_workspace(self, user, initial_ws, parent_widget=None):
         """
         Prompt the user to enter/select the client/workspace to use
         
@@ -93,7 +91,7 @@ class ConnectionHandler(object):
             raise TankError("Unable to retrieve list of workspaces without an open Perforce connection!")
         
         try:
-            # get all avaliable workspaces for the current user and this host:
+            # get all avaliable workspaces for the current user and this host machine:
             import socket
             host = socket.gethostname()
             
@@ -103,7 +101,7 @@ class ConnectionHandler(object):
             # show the password entry dialog:
             p4_widgets = self._fw.import_module("widgets")
             res, widget = self._fw.engine.show_modal("Perforce Workspace", self._fw, p4_widgets.SelectWorkspaceForm, 
-                                                     self._p4.host, int(self._p4.port), user,
+                                                     self._p4.port, user,
                                                      filtered_workspaces, initial_ws, parent_widget)
             if res == QtGui.QDialog.Accepted:
                 return widget.workspace_name
@@ -119,14 +117,20 @@ class ConnectionHandler(object):
         can't be established and the user is in ui mode then they will be prompted to edit the
         connection details.
         """
-        host = self._fw.get_setting("host")
-        port = self._fw.get_setting("port")
+        # ensure that the connect method is called from the main thread
+        # as it may need to present UI to the user:
+        return self._fw.engine.execute_on_main_thread(self._connect)
+        
+    def _connect(self):
+        """
+        """
+        server = self._fw.get_setting("server")
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
         workspace = self._get_current_workspace()
 
         try:
-            # first, attempt to connect to the server:port:
-            self.connect_to_server(host, port)
+            # first, attempt to connect to the server:
+            self.connect_to_server(server)
             
             # validate user:
             self._validate_user(user)
@@ -163,13 +167,12 @@ class ConnectionHandler(object):
     def connect_with_dlg(self):
         """
         """
-        host = self._fw.get_setting("host")
-        port = self._fw.get_setting("port")
+        server = self._fw.get_setting("server")
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
         
-        # first, attempt to connect to the server:port:
+        # first, attempt to connect to the server:
         try:
-            self.connect_to_server(host, port)
+            self.connect_to_server(server)
         except TankError, e:
             QtGui.QMessageBox.information(None, "Failed to connect to Perforce server!", "%s" % e)
             return
@@ -182,8 +185,8 @@ class ConnectionHandler(object):
             initial_workspace = self._get_current_workspace()
             
             # show the connection dialog:
-            result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, p4_widgets.OpenConnectionForm, host, 
-                                                   port, user, initial_workspace, self._setup_connection_dlg)
+            result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, p4_widgets.OpenConnectionForm, 
+                                                   server, user, initial_workspace, self._setup_connection_dlg)
            
             if result == QtGui.QDialog.Accepted:
                 # all good so return the p4 object:
@@ -233,7 +236,7 @@ class ConnectionHandler(object):
                 # show the password entry dialog:
                 p4_widgets = self._fw.import_module("widgets")
                 res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
-                                                         self._p4.host, int(self._p4.port), self._p4.user, 
+                                                         self._p4.port, self._p4.user, 
                                                          (parent_widget == None), error_msg, parent_widget)
                 
                 if res == p4_widgets.PasswordForm.SHOW_DETAILS:
@@ -271,7 +274,7 @@ class ConnectionHandler(object):
             return
         
         # prompt user to select workspace:
-        ws_name = self.prompt_for_workspace(self._p4.user, widget.workspace, widget)
+        ws_name = self._prompt_for_workspace(self._p4.user, widget.workspace, widget)
         if ws_name:
             widget.workspace = ws_name
         

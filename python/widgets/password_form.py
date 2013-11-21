@@ -29,7 +29,7 @@ class PasswordForm(QtGui.QWidget):
     # exit code returned when the 'show details' button is pressed
     SHOW_DETAILS = 2
     
-    def __init__(self, server, port, user, show_details_btn=False, error_msg = None, parent=None):
+    def __init__(self, server, user, show_details_btn=False, error_msg = None, parent=None):
         """
         Construction
         """
@@ -40,8 +40,8 @@ class PasswordForm(QtGui.QWidget):
         self.__ui.setupUi(self)
         
         self.__ui.details_label.setText(("Please enter the password required for user '%s' " 
-                                        "to log in to the Perforce server '%s:%d'") 
-                                        % (user, server, port))
+                                        "to log in to the Perforce server '%s'") 
+                                        % (user, server))
         
         self.__ui.details_btn.setVisible(show_details_btn)
         
