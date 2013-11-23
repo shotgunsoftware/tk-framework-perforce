@@ -137,13 +137,6 @@ class ConnectionHandler(object):
         can't be established and the user is in ui mode then they will be prompted to edit the
         connection details.
         """
-        # ensure that the connect method is called from the main thread
-        # as it may need to present UI to the user:
-        return self._fw.engine.execute_in_main_thread(self._connect)
-        
-    def _connect(self):
-        """
-        """
         server = self._fw.get_setting("server")  
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
         workspace = self._get_current_workspace()
@@ -195,6 +188,15 @@ class ConnectionHandler(object):
                 raise
 
     def connect_with_dlg(self):
+        """
+        Present the connection dialog to the user and prompt them to connect.  
+        
+        Returns a connected, logged-in p4 instance if successful.
+        """
+        # ensure this always runs on the main thread:
+        return self._fw.engine.execute_in_main_thread(self._connect_with_dlg)
+    
+    def _connect_with_dlg(self):
         """
         """
         server = self._fw.get_setting("server")
@@ -250,12 +252,11 @@ class ConnectionHandler(object):
             
             if self._fw.engine.has_ui:
             
-                # show the password entry dialog:
+                # prompt for a password in the main thread:
                 p4_widgets = self._fw.import_module("widgets")
-                res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
-                                                         self._p4.port, self._p4.user, (parent_widget == None), 
-                                                         None if is_first_attempt else ("Log-in failed: %s" % error_msg), 
-                                                         parent_widget)
+                res, password = self._fw.engine.execute_in_main_thread(self._prompt_for_password,
+                                                                       None if is_first_attempt else ("Log-in failed: %s" % error_msg),
+                                                                       parent_widget)
                 
                 if res == p4_widgets.PasswordForm.SHOW_DETAILS:
                     # just return the result:
@@ -265,13 +266,24 @@ class ConnectionHandler(object):
                     return False
 
                 # update password for next iteration:                
-                self._p4.password = widget.password
+                self._p4.password = password
                 is_first_attempt = False
             
             else:
                 # no UI so just raise error:
                 raise SgtkP4Error(error_msg)
     
+    def _prompt_for_password(self, error_msg, parent_widget):
+        """
+        """
+        # show the password entry dialog:
+        p4_widgets = self._fw.import_module("widgets")
+        res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
+                                                 self._p4.port, self._p4.user, (parent_widget == None), 
+                                                 error_msg, parent_widget)
+        
+        return (res, widget.password)
+        
     def _on_browse_workspace(self, widget):
         """
         """
