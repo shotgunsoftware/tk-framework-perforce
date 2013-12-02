@@ -57,16 +57,17 @@ class PerforceFramework(tank.platform.Framework):
             pass
         else:
             # P4 already available!
-            self.log_info("P4Python successfully loaded!")
+            self.log_debug("P4Python successfully loaded!")
             return
         
-        # add the platform specific path to sys.path:
-        # (AD) - this should be python version dependent as well!
-        if sys.platform == "darwin":
-            p4_path = os.path.join(self.disk_location, "resources","p4python_py26_p42012.1_mac", "python")
+        # add the python version, p4d version, & platform specific path to sys.path:
+        py_version_str = "%d%d" % (sys.version_info[0], sys.version_info[1])
+        p4d_version_str = "2012.1" # (AD) - should this be driven from the config?
+        os_str = {"darwin":"mac", "win32":"win64" if sys.maxsize > 2**32 else "win32", "linux2":"linux"}[sys.platform]
+        p4python_dir = "p4python_py%s_p4%s_%s" % (py_version_str, p4d_version_str, os_str)
+        p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
+        if os.path.exists(p4_path):
             sys.path.append(p4_path)
-            
-        self.log_info("")
             
         # finally, check that it's working!
         try:
@@ -74,7 +75,7 @@ class PerforceFramework(tank.platform.Framework):
         except:
             self.log_error("Failed to load P4Python!")
         else:
-            self.log_info("P4Python successfully loaded!")
+            self.log_debug("P4Python successfully loaded!")
             
             
             
