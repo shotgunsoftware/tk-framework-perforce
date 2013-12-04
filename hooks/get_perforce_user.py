@@ -29,6 +29,10 @@ class GetPerforceUser(sgtk.Hook):
                      The Perforce username for the specified Shotgun user
         """
         
+        if not sg_user:
+            # can't determine Perforce user if we don't know sg user!
+            return None
+        
         # default implementation returns the login for the current Shotgun user
         if "login" not in sg_user:
             raise sgtk.TankError("'login' field missing from Shotgun user dictionary!") 

@@ -17,6 +17,11 @@ configuration:
         type: str
         description: "Perforce server to connect to.  Should be of the form: 'server:port', 
                      e.g. 'localhost:1666'"
+                     
+    server_version:
+        type: float
+        description: "Version of Perforce Server to connect to"
+        default_value: 2012.1
         
     hook_get_perforce_user:
         type: hook

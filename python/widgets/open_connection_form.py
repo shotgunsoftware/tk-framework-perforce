@@ -24,7 +24,7 @@ class OpenConnectionForm(QtGui.QWidget):
     def exit_code(self):
         return self._exit_code
     
-    def __init__(self, server, user, workspace="", setup_proc = None, parent=None):
+    def __init__(self, server, user, sg_user, workspace="", setup_proc = None, parent=None):
         """
         Construction
         """
@@ -33,6 +33,7 @@ class OpenConnectionForm(QtGui.QWidget):
         self._exit_code = QtGui.QDialog.Rejected
         self._server = server
         self._user = user
+        self._sg_user = sg_user
         
         # create the UI:
         self.__ui = Ui_OpenConnectionForm()
@@ -47,8 +48,12 @@ class OpenConnectionForm(QtGui.QWidget):
         self.__ui.workspace_edit.installEventFilter(self)
         
         self.__ui.server_label.setText(self._server)
-        self.__ui.user_label.setText(self._user)
-        
+        self.__ui.user_label.setText(self._user or "<b><font color=\"orange\">Warning, user unknown!</font></b>")
+        if not self._user:
+            # add tooltip for the user!
+            self.__ui.user_label.setToolTip(("Unable to determine Perforce username for the\n"
+                                            "current Shotgun user '%s'!") 
+                                            % (self._sg_user["name"] if self._sg_user else "Unknown"))
         self.__ui.workspace_edit.setText(workspace)
         
         if setup_proc:
@@ -115,9 +120,7 @@ class OpenConnectionForm(QtGui.QWidget):
         """
         """
         have_workspace = bool(self.workspace)
-
-        self.__ui.ok_btn.setEnabled(have_workspace)
-        
+        self.__ui.ok_btn.setEnabled(have_workspace)        
         
         
         

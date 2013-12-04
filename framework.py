@@ -59,11 +59,43 @@ class PerforceFramework(sgtk.platform.Framework):
             self.log_debug("P4Python successfully loaded!")
             return
         
-        # add the python version, p4d version, & platform specific path to sys.path:
+        # build the directory path for our distributed P4Python:
+        #
+        
+        # Python version:
         py_version_str = "%d%d" % (sys.version_info[0], sys.version_info[1])
-        p4d_version_str = "2012.1" # (AD) - should this be driven from the config?
+        
+        # Perforce server version:
+        #
+        # The version of P4Python required to work with a Perforce server version
+        # is a bit random!  Ideally it should be the same version but a different
+        # version may work without problems depending on API changes and required
+        # functionality.
+        #
+        # The following code attempts to find the most suitable version from the
+        # available versions for the server version specified in the config  
+        p4d_version = self.get_setting("server_version")
+        supported_versions = [2012.1]#, 2013.1]
+        if p4d_version not in supported_versions:
+            # no exact match found so look for highest version matching
+            # major version only:
+            supported_versions.sort(reverse=True)
+            matching_version = None    
+            for v in supported_versions:
+                # check if the version is in range: 
+                if int(p4d_version) <= v <= p4d_version:
+                    matching_version = v 
+                    break
+                
+            # use this version or default to the latest available version:
+            p4d_version = matching_version or supported_versions[0]
+        
+        p4d_version_str = ("%f" % p4d_version).rstrip("0")
+        
+        # platform/os string
         os_str = {"darwin":"mac", "win32":"win64" if sys.maxsize > 2**32 else "win32", "linux2":"linux"}[sys.platform]
         
+        # compiler string - currently windows specific:
         compiler_str = ""
         if sys.platform == "win32":
             # for windows, we may need to determine p4python based on compiler:
@@ -80,28 +112,19 @@ class PerforceFramework(sgtk.platform.Framework):
                 try:
                     msc_version = int(parts[1][2:])
                     
-                    # convert this to a vc version:
-                    if msc_version >= 1800:
-                        # follow convention of msc_version being 6 ahead of vc version!
-                        vc_version = msc_version/100 - 6
-                    elif msc_version >= 1700:
-                        # VS2012/VC11
-                        vc_version = 11
-                    elif msc_version >= 1600:
-                        # VS2010/VC10
-                        vc_version = 10
-                    elif msc_version >= 1500:
-                        # VS2008/VC9
-                        vc_version = 9
-
+                    # convert this to a vc version - follow convention of 
+                    # msc_version being 6 ahead of vc version!
+                    vc_version = msc_version/100 - 6
+                    
                 except ValueError:
                     pass
 
             compiler_str = "_vc%d" % vc_version
 
-        
-        p4python_dir = "p4python_py%s_p4%s%s_%s" % (py_version_str, p4d_version_str, compiler_str, os_str)
+        # build the python directory:
+        p4python_dir = "p4python_py%s_p4d%s%s_%s" % (py_version_str, p4d_version_str, compiler_str, os_str)
         p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
+        
         if os.path.exists(p4_path):
             sys.path.append(p4_path)
             
@@ -112,8 +135,7 @@ class PerforceFramework(sgtk.platform.Framework):
             self.log_error("Failed to load P4Python!")
         else:
             self.log_debug("P4Python successfully loaded!")
-            
-            
+
             
             
   

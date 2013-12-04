@@ -200,7 +200,8 @@ class ConnectionHandler(object):
         """
         """
         server = self._fw.get_setting("server")
-        user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
+        sg_user = sgtk.util.get_current_user(self._fw.sgtk)
+        user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sg_user)
         
         try:
             
@@ -211,7 +212,7 @@ class ConnectionHandler(object):
             
             # show the connection dialog:
             result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, p4_widgets.OpenConnectionForm, 
-                                                   server, user, initial_workspace, self._setup_connection_dlg)
+                                                   server, user, sg_user, initial_workspace, self._setup_connection_dlg)
            
             if result == QtGui.QDialog.Accepted:
                 # all good so return the p4 object:
@@ -288,6 +289,10 @@ class ConnectionHandler(object):
         """
         """
         if not widget.user:
+            sg_user = sgtk.util.get_current_user(self._fw.sgtk)
+            msg = ("Unable to browse Perforce Workspaces without a corresponding "
+                  "Perforce username for Shotgun user:\n\n   '%s'" % (sg_user["name"] if sg_user else "Unknown"))
+            QtGui.QMessageBox.warning(widget, "Unknown Perforce User!", msg)            
             return
 
         server = self._fw.get_setting("server")
@@ -318,7 +323,14 @@ class ConnectionHandler(object):
     def _on_open_connection(self, widget):
         """
         """
-        if not widget.user or not widget.workspace:
+        if not widget.user:
+            sg_user = sgtk.util.get_current_user(self._fw.sgtk)
+            msg = ("Unable to connect to Perforce without a corresponding "
+                  "Perforce username for Shotgun user:\n\n   '%s'" % (sg_user["name"] if sg_user else "Unknown"))
+            QtGui.QMessageBox.warning(widget, "Unknown Perforce User!", msg)
+            return
+        
+        if not widget.workspace:
             return
 
         server = self._fw.get_setting("server")
@@ -406,7 +418,7 @@ class ConnectionHandler(object):
             
         user_names = [p4_user["User"] for p4_user in users]
         if not user in user_names:
-            raise TankError("User '%s' does not exist!")        
+            raise TankError("User '%s' does not exist!" % user)        
 
     def _login_required(self, min_timeout=300):
         """
