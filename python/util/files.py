@@ -34,25 +34,23 @@ def _run_fstat(p4, file_paths, fields, type):
     """
     Return file details for the specified list of paths
     """
-    # partition files into directories:
-    files_by_dir = {}
-    for file_path in file_paths:
-        files_by_dir.setdefault(os.path.dirname(file_path), list()).append(file_path)
-        
-    # now query files for each directory:
-    p4_file_details = {}
-    for dir, file_paths in files_by_dir.iteritems():
-        
-        p4_res = []
-        try:
-            p4_res = p4.run_fstat("-T", fields, str(os.path.join(dir, "*")))
-        except P4Exception:
-            pass
+    p4_res = []
+    try:
+        p4_res = p4.run_fstat("-T", fields, file_paths)
+    except P4Exception:
+        pass
     
-        # match up files with p4_files:
-        p4_res = dict((f[type], f) for f in p4_res if type in f)
+    # match up files with p4_files:
+    p4_res_lookup = {}
+    for item in p4_res:
+        if type not in item:
+            continue
+        key = item[type].replace("\\", "/")
+        p4_res_lookup[key] = item
         
-        for file_path in file_paths:
-            p4_file_details[file_path] = p4_res.get(file_path, {})
-
+    p4_file_details = {}
+    for file_path in file_paths:
+        key = file_path.replace("\\", "/")
+        p4_file_details[file_path] = p4_res_lookup.get(key, {})
+        
     return p4_file_details
