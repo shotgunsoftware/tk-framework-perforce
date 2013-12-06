@@ -31,19 +31,19 @@ class PerforceFramework(sgtk.platform.Framework):
     def destroy_framework(self):
         self.log_debug("%s: Destroying..." % self)
     
-    def connect(self):
+    def connect(self, allow_ui=True, password=None):
         """
         Connect to Perforce
         """
         util = self.import_module("util")
-        return util.connect(self)
+        return util.ConnectionHandler(self).connect(allow_ui, password)
         
     def connect_with_dlg(self):
         """
         Show the Perforce connection dialog
         """
         util = self.import_module("util")
-        return util.connect_with_dlg(self)
+        return util.ConnectionHandler(self).connect_with_dlg()
     
     def get_perforce_user(self, sg_user):
         """

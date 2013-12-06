@@ -8,6 +8,6 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-from .connection import connect, connect_with_dlg
+from .connection import ConnectionHandler
 from .files import get_client_file_details, get_depot_file_details
 

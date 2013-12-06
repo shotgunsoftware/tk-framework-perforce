@@ -95,7 +95,7 @@ class ConnectionHandler(object):
         
         login_req = self._login_required()
         if login_req:
-            if self._do_login(parent_widget) != True:
+            if self._do_login(True, parent_widget) != True:
                 raise TankError("Unable to login user %s without a password!" % user)
     
     def _prompt_for_workspace(self, user, initial_ws, parent_widget=None):
@@ -131,7 +131,7 @@ class ConnectionHandler(object):
         
         return None
     
-    def connect(self):
+    def connect(self, allow_ui=True, password=None):
         """
         Utility method that returns a connection using the current configuration.  If a connection
         can't be established and the user is in ui mode then they will be prompted to edit the
@@ -157,7 +157,10 @@ class ConnectionHandler(object):
                 # if log-in is required then log-in:
                 login_req = self._login_required()
                 if login_req:
-                    res = self._do_login()
+                    if password:
+                        self._p4.password = password
+                        
+                    res = self._do_login(allow_ui)
                     p4_widgets = self._fw.import_module("widgets")
                     if res == p4_widgets.PasswordForm.SHOW_DETAILS:
                         # switch to connection dialog
@@ -180,7 +183,7 @@ class ConnectionHandler(object):
         except TankError, e:
             # failed to connect to server - switch to UI mode
             # if available instead:
-            if self._fw.engine.has_ui:
+            if allow_ui and self._fw.engine.has_ui:
                 # just show the connection UI instead:
                 return self.connect_with_dlg()
             else:
@@ -230,7 +233,7 @@ class ConnectionHandler(object):
         widget.browse_workspace_clicked.connect(self._on_browse_workspace)
         widget.open_clicked.connect(self._on_open_connection)
 
-    def _do_login(self, parent_widget=None):
+    def _do_login(self, allow_ui=True, parent_widget=None):
         """
         :return: Bool - True if the user successfully logged in, False otherwise 
         """
@@ -251,7 +254,7 @@ class ConnectionHandler(object):
                 # successfully logged in!
                 return True
             
-            if self._fw.engine.has_ui:
+            if allow_ui and self._fw.engine.has_ui:
             
                 # prompt for a password in the main thread:
                 p4_widgets = self._fw.import_module("widgets")
