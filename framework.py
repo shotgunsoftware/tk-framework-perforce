@@ -33,15 +33,29 @@ class PerforceFramework(sgtk.platform.Framework):
     
     def connect(self):
         """
+        Connect to Perforce
         """
         util = self.import_module("util")
         return util.connect(self)
         
     def connect_with_dlg(self):
         """
+        Show the Perforce connection dialog
         """
         util = self.import_module("util")
         return util.connect_with_dlg(self)
+    
+    def get_perforce_user(self, sg_user):
+        """
+        Return the Perforce user associated with the specified Shotgun user
+        """
+        return self.execute_hook("hook_get_perforce_user", sg_user = sg_user)
+
+    def get_shotgun_user(self, p4_user):
+        """
+        Return the Shotgun user associated with the specified Perforce user
+        """
+        return self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
         
     def __init_p4python(self):
         """

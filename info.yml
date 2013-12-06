@@ -17,6 +17,7 @@ configuration:
         type: str
         description: "Perforce server to connect to.  Should be of the form: 'server:port', 
                      e.g. 'localhost:1666'"
+        default_value: "1666"
                      
     server_version:
         type: float
@@ -27,6 +28,11 @@ configuration:
         type: hook
         parameters: [sg_user]
         default_value: get_perforce_user
+
+    hook_get_shotgun_user:
+        type: hook
+        parameters: [p4_user]
+        default_value: get_shotgun_user
 
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
