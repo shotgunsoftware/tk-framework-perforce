@@ -57,6 +57,28 @@ class PerforceFramework(sgtk.platform.Framework):
         """
         return self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
         
+        
+    def store_publish_data(self, path, user, workspace, data):
+        """
+        Store the publish data for the specified path, user & workspace
+        somewhere 
+        """
+        self.execute_hook("hook_store_publish_data", 
+                                 path = path,
+                                 user = user, 
+                                 workspace = workspace,
+                                 data = data)
+    
+    def load_publish_data(self, depot_path, user, workspace):
+        """
+        Load the publish data for the specified path, user & workspace
+        from the location it was stored
+        """
+        return self.execute_hook("hook_load_publish_data", 
+                                 depot_path = depot_path,
+                                 user = user, 
+                                 workspace = workspace)
+        
     def __init_p4python(self):
         """
         Make sure that p4python is available and if it's

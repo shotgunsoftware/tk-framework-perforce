@@ -33,7 +33,17 @@ configuration:
         type: hook
         parameters: [p4_user]
         default_value: get_shotgun_user
+        
+    hook_store_publish_data:
+        type: hook
+        parameters: [path, user, workspace, data]
+        default_value: store_publish_data
 
+    hook_load_publish_data:
+        type: hook
+        parameters: [depot_path, user, workspace]
+        default_value: load_publish_data
+        
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
 
