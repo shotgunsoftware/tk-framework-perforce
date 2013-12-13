@@ -13,6 +13,8 @@ Common utilities for working with Perforce changes
 """
 from P4 import P4Exception
 
+from sgtk import TankError
+
 def create_change(p4, description):
     """
     Helper method to create a new change

@@ -13,8 +13,9 @@ Common utilities for working with Perforce files
 """
 
 import os
-
 from P4 import P4Exception
+
+from sgtk import TankError
 
 DEFAULT_FSTAT_FIELDS = "clientFile,depotFile,haveRev,headRev"
 
