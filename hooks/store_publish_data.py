@@ -17,20 +17,20 @@ import os, sys
  
 class StorePublishData(sgtk.Hook):
     
-    def execute(self, path, user, workspace, data, **kwargs):
+    def execute(self, local_path, user, workspace, data, **kwargs):
         """
         Store the specified publish data so that it can be retrieved lated by
         the corresponding load_publish_data hook
         
-        :publish_path:  String
-                        Path to the file being published
+        :local_path:    String
+                        Local path to the file being published
                         
         :user:          Dictionary
                         Shotgun HumanUser entity dictionary
                         
         :workspace:     String
                         The Perforce workspace/client that path is being published in                     
-                     
+
         :data:          Dictionary
                         Dictionary of data to store for the published file.  This data will match the
                         parameters expected by the 'sgtk.util.register_publish()' function.

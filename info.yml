@@ -36,12 +36,12 @@ configuration:
         
     hook_store_publish_data:
         type: hook
-        parameters: [path, user, workspace, data]
+        parameters: [local_path, user, workspace, data]
         default_value: store_publish_data
 
     hook_load_publish_data:
         type: hook
-        parameters: [depot_path, user, workspace]
+        parameters: [depot_path, user, workspace, revision]
         default_value: load_publish_data
         
 # the Shotgun fields that this engine needs in order to operate correctly
@@ -53,7 +53,7 @@ description: "Common Perforce functionality used by various apps & hooks"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:
-requires_core_version: "v0.14.31"
+requires_core_version: "v0.14.32"
 
  
         

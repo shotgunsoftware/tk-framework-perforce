@@ -58,26 +58,27 @@ class PerforceFramework(sgtk.platform.Framework):
         return self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
         
         
-    def store_publish_data(self, path, user, workspace, data):
+    def store_publish_data(self, local_path, user, workspace, data):
         """
         Store the publish data for the specified path, user & workspace
-        somewhere 
+        somewhere using a hook
         """
         self.execute_hook("hook_store_publish_data", 
-                                 path = path,
+                                 local_path = local_path,
                                  user = user, 
                                  workspace = workspace,
                                  data = data)
     
-    def load_publish_data(self, depot_path, user, workspace):
+    def load_publish_data(self, depot_path, user, workspace, revision):
         """
         Load the publish data for the specified path, user & workspace
-        from the location it was stored
+        from the location it was stored using a hook
         """
         return self.execute_hook("hook_load_publish_data", 
                                  depot_path = depot_path,
                                  user = user, 
-                                 workspace = workspace)
+                                 workspace = workspace,
+                                 revision = revision)
         
     def __init_p4python(self):
         """

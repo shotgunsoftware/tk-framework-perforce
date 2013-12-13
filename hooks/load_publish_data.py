@@ -17,7 +17,7 @@ import os, sys
  
 class LoadPublishData(sgtk.Hook):
     
-    def execute(self, path, user, workspace, **kwargs):
+    def execute(self, path, user, workspace, revision, **kwargs):
         """
         Load the specified publish data so that was previously stored by
         the corresponding save_publish_data hook
@@ -30,6 +30,9 @@ class LoadPublishData(sgtk.Hook):
                         
         :workspace:     String
                         The Perforce workspace/client that path is being published in
+                        
+        :revision:      Int
+                        Revision of the published file
                      
         :returns:       Dictionary
                         Dictionary of data loaded for the published file.  This data should match 
