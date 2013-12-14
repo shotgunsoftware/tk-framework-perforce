@@ -51,7 +51,7 @@ def depot_to_client_paths(p4, depot_paths):
         client_paths.append(client_path)
     return client_paths
 
-def check_out_file(p4, path, add_if_not_exists=True):
+def check_out_file(p4, path, add_if_not_exists=False):
     """
     Check out the specified path for edit.  If the path is not in the depot
     and add_if_not_exists is True then add the file to the depot

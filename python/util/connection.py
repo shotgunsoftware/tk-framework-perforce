@@ -46,11 +46,14 @@ class ConnectionHandler(object):
             self._p4.disconnect()
         self._p4 = None
 
-    def connect_to_server(self, server):
+    def connect_to_server(self):
         """
         Open a connection to the specified server.
         Returns a new P4 connection object if successful 
         """
+        server = self._fw.get_setting("server")
+        host = self._fw.get_setting("host")
+        
         # create new P4 instance 
         p4 = P4()
         
@@ -60,6 +63,8 @@ class ConnectionHandler(object):
     
         # load the server configuration:
         p4.port = str(server)
+        if host:
+            p4.host = str(host)
     
         # attempt to connect to the server:
         try:
@@ -89,8 +94,6 @@ class ConnectionHandler(object):
         if not self._p4 or not self._p4.connected():
             raise TankError("Unable to log user in without an open Perforce connection!")
         
-        # check that user is valid:
-        self._validate_user(user)
         self._p4.user = str(user)
         
         login_req = self._login_required()
@@ -137,21 +140,19 @@ class ConnectionHandler(object):
         can't be established and the user is in ui mode then they will be prompted to edit the
         connection details.
         """
-        server = self._fw.get_setting("server")  
+        server = self._fw.get_setting("server")
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
         workspace = self._get_current_workspace()
 
         try:
             # first, attempt to connect to the server:
             try:
-                self.connect_to_server(server)
+                self.connect_to_server()
             except SgtkP4Error, e:
                 raise TankError("Perforce: Failed to connect to perforce server '%s' - %s" % (server, e))
     
             # log-in user:
             try:
-                # validate user:
-                self._validate_user(user)
                 self._p4.user = user
                 
                 # if log-in is required then log-in:
@@ -302,7 +303,7 @@ class ConnectionHandler(object):
         try:
             # ensure we are connected:
             if not self._p4 or not self._p4.connected():
-                self.connect_to_server(server)
+                self.connect_to_server()
         except TankError, e:
             QtGui.QMessageBox.information(widget, "Perforce Connection Failed", 
                                           "Failed to connect to Perforce server:\n\n    '%s'\n\n%s" % (server, e))
@@ -341,7 +342,7 @@ class ConnectionHandler(object):
         # ensure we are connected:
         try:
             if not self._p4 or not self._p4.connected():
-                self.connect_to_server(server)
+                self.connect_to_server()
         except TankError, e:
             QtGui.QMessageBox.information(widget, "Perforce Connection Failed", 
                                           "Failed to connect to Perforce server:\n\n    '%s'\n\n%s" % (server, e))
@@ -408,20 +409,6 @@ class ConnectionHandler(object):
         ws_users = [ws.get("Owner") for ws in workspaces]
         if user not in ws_users:
             raise TankError("Workspace '%s' is not owned by user '%s'" % (workspace, user))
-
-    def _validate_user(self, user):
-        """
-        """
-        # first, check to see if the user is required to log in:
-        users = []
-        try:
-            users = self._p4.run_users()
-        except P4Exception:
-            raise SgtkP4Error(self._p4.errors[0] if self._p4.errors else str(e))            
-            
-        user_names = [p4_user["User"] for p4_user in users]
-        if not user in user_names:
-            raise TankError("User '%s' does not exist!" % user)        
 
     def _login_required(self, min_timeout=300):
         """
