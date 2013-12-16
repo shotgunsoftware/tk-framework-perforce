@@ -82,9 +82,8 @@ class PerforceFramework(sgtk.platform.Framework):
         
     def __init_p4python(self):
         """
-        Make sure that p4python is available and if it's
-        not then add it to the path if we have a version
-        we can use
+        Make sure that p4python is available and if it's not then add it to the path if 
+        we have a version we can use.
         """
         try:
             from P4 import P4
@@ -95,7 +94,7 @@ class PerforceFramework(sgtk.platform.Framework):
             # P4 already available!
             self.log_debug("P4Python successfully loaded!")
             return
-        
+
         # build the directory path for our distributed P4Python:
         #
         
@@ -161,18 +160,20 @@ class PerforceFramework(sgtk.platform.Framework):
         # build the python directory:
         p4python_dir = "p4python_py%s_p4d%s%s_%s" % (py_version_str, p4d_version_str, compiler_str, os_str)
         p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
-        
-        if os.path.exists(p4_path):
-            sys.path.append(p4_path)
-            
-        # finally, check that it's working!
-        try:
-            from P4 import P4
-        except:
-            self.log_error("Failed to load P4Python!")
+        if not os.path.exists(p4_path):
+            self.log_error("Unable to locate a compatible version of P4Python for Python v%d.%d, P4D v%s%s. "
+                           "Please contact toolkitsupport@shotgunsoftware.com for assistance!" 
+                           % (sys.version_info[0], sys.version_info[1], p4d_version_str, compiler_str))
         else:
-            self.log_debug("P4Python successfully loaded!")
-
+            sys.path.append(p4_path)
+                
+            # finally, check that it's working!
+            try:
+                from P4 import P4
+            except:
+                self.log_error("Failed to load P4Python!")
+            else:
+                self.log_debug("P4Python successfully loaded!")
             
             
   
