@@ -184,12 +184,18 @@ class ConnectionHandler(object):
         except TankError, e:
             # failed to connect to server - switch to UI mode
             # if available instead:
-            if allow_ui and self._fw.engine.has_ui:
+            if allow_ui and self._fw.engine.execute_in_main_thread(self.__has_ui):
                 # just show the connection UI instead:
                 return self.connect_with_dlg()
             else:
                 # re-raise the last exception:
                 raise
+
+    def __has_ui(self):
+        """
+        Check if the engine has a ui
+        """
+        return self._fw.engine.has_ui
 
     def connect_with_dlg(self):
         """
