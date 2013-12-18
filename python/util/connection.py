@@ -424,9 +424,14 @@ class ConnectionHandler(object):
         users = []
         try:
             # This will raise a P4Exception if the user isn't valid:
+            # (TODO) - check this wasn't just a warning!
             users = self._p4.run_users(self._p4.user)
         except P4Exception:
             raise SgtkP4Error(self._p4.errors[0] if self._p4.errors else str(e))            
+    
+        if not users:
+            # just in case it didn't raise an exception!
+            return True
     
         # users = [...{'Password': 'enabled'}...]
         if not users[0].get("Password") == "enabled":

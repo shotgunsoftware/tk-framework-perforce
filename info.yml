@@ -28,7 +28,7 @@ configuration:
         type: str
         description: "Name of the host computer to impersonate when connecting to Perforce.  
                       This is usually left empty!"
-        allows_empty: True
+        default_value: ''
         
     hook_get_perforce_user:
         type: hook
