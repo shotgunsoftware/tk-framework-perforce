@@ -10,6 +10,26 @@
 
 """
 Hook that gets called to store publish data for a path being submitted to Perforce
+
+This example uses a Shotgun custom entity as a storage location for Publish Data.
+
+The 'Pending Published File' entity should be set up with the following fields:
+
+    # Entity used to store publish data between publish & perforce->shotgun sync
+    PENDING_PUBLISHED_FILE_ENTITY: [
+        {"display_name": "Workspace",            "type":"text",          "properties":{}},
+        {"display_name": "Published File Type",  "type":"text",          "properties":{}},
+        {"display_name": "Entity",               "type":"entity",        "properties":{"valid_types": ["Asset", LEVEL_ENTITY]}},
+        {"display_name": "Task",                 "type":"entity",        "properties":{"valid_types": ["Task"]}},
+        {"display_name": "Metadata",             "type":"url",           "properties":{}},
+        {"display_name": "Head Revision",        "type":"number",        "properties":{}}            
+    ]
+    
+    # Note: LEVEL_ENTITY should be set to the custom entity being used to represent
+    # levels
+
+The custom entity should be updated in the code below and in the corresponding
+load_publish_data_shotgun.py hook.
 """
 
 import sgtk
@@ -19,6 +39,7 @@ from tank_vendor import yaml
 import os, sys
 import tempfile
 
+# TODO: set this to the custom entity set up to represent pending published files
 PENDING_PUBLISHED_FILE_ENTITY = "CustomEntity27"
          
 class StorePublishData(sgtk.Hook):
