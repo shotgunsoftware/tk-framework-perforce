@@ -23,13 +23,13 @@ def get_client_file_details(p4, paths, fields = DEFAULT_FSTAT_FIELDS):
     """
     Return file details for the specified list of local/client paths
     """
-    return _run_fstat(p4, paths, ",".join(["clientFile", DEFAULT_FSTAT_FIELDS]), "clientFile")
+    return _run_fstat(p4, paths, ",".join(["clientFile", fields]), "clientFile")
     
 def get_depot_file_details(p4, paths, fields = DEFAULT_FSTAT_FIELDS):
     """
     Return file details for the specified list of depot paths
     """
-    return _run_fstat(p4, paths, ",".join(["depotFile", DEFAULT_FSTAT_FIELDS]), "depotFile")
+    return _run_fstat(p4, paths, ",".join(["depotFile", fields]), "depotFile")
 
 def client_to_depot_paths(p4, client_paths):
     """
