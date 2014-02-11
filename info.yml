@@ -42,13 +42,23 @@ configuration:
         
     hook_store_publish_data:
         type: hook
-        parameters: [local_path, user, workspace, data]
+        parameters: [local_path, publish_data]
         default_value: store_publish_data
 
     hook_load_publish_data:
         type: hook
         parameters: [depot_path, user, workspace, revision]
         default_value: load_publish_data
+
+    hook_store_review_data:
+        type: hook
+        parameters: [local_publish_paths, version_data]
+        default_value: store_review_data
+
+    hook_load_review_data:
+        type: hook
+        parameters: [depot_path, user, workspace, revision]
+        default_value: load_review_data
         
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:

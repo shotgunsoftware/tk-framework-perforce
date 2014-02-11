@@ -58,16 +58,13 @@ class PerforceFramework(sgtk.platform.Framework):
         return self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
         
         
-    def store_publish_data(self, local_path, user, workspace, data):
+    def store_publish_data(self, local_path, publish_data):
         """
-        Store the publish data for the specified path, user & workspace
-        somewhere using a hook
+        Store the publish data for the specified path somewhere using a hook
         """
         self.execute_hook("hook_store_publish_data", 
-                                 local_path = local_path,
-                                 user = user, 
-                                 workspace = workspace,
-                                 data = data)
+                          local_path = local_path,
+                          publish_data = publish_data)
     
     def load_publish_data(self, depot_path, user, workspace, revision):
         """
@@ -79,6 +76,27 @@ class PerforceFramework(sgtk.platform.Framework):
                                  user = user, 
                                  workspace = workspace,
                                  revision = revision)
+
+    def store_publish_version_data(self, local_publish_paths, version_data):
+        """
+        Store review 'version' data for the specified publish paths
+        somewhere using a hook
+        """
+        self.execute_hook("hook_store_review_data", 
+                          local_publish_paths = local_publish_paths,
+                          version_data = version_data)
+
+    def load_publish_review_data(self, depot_path, user, workspace, revision):
+        """
+        Load the review version data for the specified publish paths, user & workspace
+        from the location it was stored using a hook
+        """
+        return self.execute_hook("hook_load_review_data", 
+                                 depot_path = depot_path,
+                                 user = user, 
+                                 workspace = workspace,
+                                 revision = revision)
+
         
     def __init_p4python(self):
         """

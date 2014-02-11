@@ -44,7 +44,7 @@ PENDING_PUBLISHED_FILE_ENTITY = "CustomEntity27"
          
 class StorePublishData(sgtk.Hook):
     
-    def execute(self, local_path, user, workspace, data, **kwargs):
+    def execute(self, local_path, publish_data, **kwargs):
         """
         Store the specified publish data so that it can be retrieved lated by
         the corresponding load_publish_data hook
@@ -52,13 +52,7 @@ class StorePublishData(sgtk.Hook):
         :local_path:    String
                         Local path to the file being published
                         
-        :user:          Dictionary
-                        Shotgun HumanUser entity dictionary
-                        
-        :workspace:     String
-                        The Perforce workspace/client that path is being published in                     
-                     
-        :data:          Dictionary
+        :publish_data:  Dictionary
                         Dictionary of data to store for the published file.  This data will match the
                         parameters expected by the 'sgtk.util.register_publish()' function.
         """
@@ -70,7 +64,7 @@ class StorePublishData(sgtk.Hook):
         
         # all publish paths stored in Shotgun are depot paths so first we need
         # to convert all paths in the data to depot paths:
-        dependency_paths = data.get("dependency_paths", [])
+        dependency_paths = publish_data.get("dependency_paths", [])
         p4_file_details = p4_util.get_client_file_details(p4, [local_path] + dependency_paths)
         
         depot_path = p4_file_details[local_path].get("depotFile")
@@ -98,18 +92,19 @@ class StorePublishData(sgtk.Hook):
         # build data for new entity:
         create_data = {"code":depot_path,
                        "project":p4_fw.context.project,
-                       "created_by":user,
-                       "sg_workspace":workspace,
+                       "sg_workspace":str(p4.client),
                        "sg_head_revision":head_revision
                        }
         
-        if "comment" in data:
-            create_data["description"] = data.get("comment", "")
-        if "published_file_type" in data:
-            create_data["sg_published_file_type"] = data.get("published_file_type", "")                        
+        if "created_by" in publish_data:
+            create_data["created_by"] = publish_data["created_by"]
+        if "comment" in publish_data:
+            create_data["description"] = publish_data["comment"]
+        if "published_file_type" in publish_data:
+            create_data["sg_published_file_type"] = publish_data["published_file_type"]                        
         
-        task = data.get("task")
-        ctx = data.get("context")
+        task = publish_data.get("task")
+        ctx = publish_data.get("context")
         if ctx:
             if ctx.entity:
                 create_data["sg_entity"] = ctx.entity
@@ -122,7 +117,7 @@ class StorePublishData(sgtk.Hook):
         sg_res = p4_fw.shotgun.create(PENDING_PUBLISHED_FILE_ENTITY, create_data)
         
         # upload the thumbnail:
-        thumbnail_path = data.get("thumbnail_path")
+        thumbnail_path = publish_data.get("thumbnail_path")
         if thumbnail_path and os.path.exists(thumbnail_path):
             # we can store the thumbnail directly on the entity
             p4_fw.shotgun.upload_thumbnail(sg_res["type"], sg_res["id"], thumbnail_path)
