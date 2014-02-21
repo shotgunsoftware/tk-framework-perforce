@@ -16,11 +16,12 @@ import sgtk
 from tank_vendor import yaml
 
 import os
-import sys
-import tempfile
-import binascii
+import copy
  
 class StorePublishData(sgtk.Hook):
+    
+    PUBLISH_ATTRIB_NAME = "shotgun_metadata"
+    REVIEW_ATTRIB_NAME = "shotgun_review_metadata"
     
     def execute(self, local_path, publish_data, **kwargs):
         """
@@ -35,11 +36,17 @@ class StorePublishData(sgtk.Hook):
                         parameters expected by the 'sgtk.util.register_publish()' function.
         """
         
-        # the default implementation stores the publish data in a p4 attribute so 
+        # The default implementation stores the publish data in a p4 attribute so 
         # that it lives with the file:
         #
         #    shotgun_metadata - store a yaml version of all metadata
-        sg_metadata = {}
+        #
+        # If a thumbnail is specified in the publish_data then this is uploaded to
+        # Shotgun as an attachment to the current project. 
+        if not local_path or not publish_data:
+            return
+        
+        sg_metadata = copy.deepcopy(publish_data)
                         
         p4_fw = self.parent
         p4_util = p4_fw.import_module("util")
@@ -48,45 +55,25 @@ class StorePublishData(sgtk.Hook):
         # we'll need a Perforce connection:
         p4 = p4_fw.connect()
         
-        # dependencies:
-        dependency_paths = publish_data.get("dependency_paths", [])
-        depot_dependency_paths = []
+        # convert dependencies from local to depot paths:
+        dependency_paths = sg_metadata.get("dependency_paths", [])
         if dependency_paths:
             depot_dependency_paths = p4_util.client_to_depot_paths(p4, dependency_paths)
             depot_dependency_paths = [dp for dp in depot_dependency_paths if dp]
+            sg_metadata["dependency_paths"] = depot_dependency_paths
 
-        sg_metadata["dependency_paths"] = depot_dependency_paths
-        
-        # entity & task:
-        task = publish_data.get("task")
-        ctx = publish_data.get("context")
+        # replace context with a serialized version:
+        ctx = sg_metadata.get("context")
         if ctx:
-            if ctx.entity:
-                sg_metadata["entity"] = ctx.entity
-            if not task:
-                task = ctx.task
-        if task:
-            sg_metadata["task"] = task        
+            ctx_str = sgtk.context.serialize(ctx)
+            sg_metadata["context"] = ctx_str
         
-        # comment/description:
-        sg_metadata["comment"] = publish_data.get("comment", "")
-        
-        # published file type:
-        sg_metadata["published_file_type"] = publish_data.get("published_file_type", "")
-        
-        # thumbnail:
-        thumbnail_path = publish_data.get("thumbnail_path")
+        # store thumbnail as Project attachment in Shotgun:
+        thumbnail_path = sg_metadata.get("thumbnail_path")
         if thumbnail_path and os.path.exists(thumbnail_path):
-            f = None
-            try:
-                f = open(thumbnail_path, "rb")
-                content = f.read()
-                _, sg_metadata["thumbnail_type"] = os.path.splitext(thumbnail_path)
-                sg_metadata["thumbnail"] = binascii.hexlify(content)
-            finally:
-                if f:
-                    f.close()
-                
+            attachment_id = self.__upload_file_to_sg(thumbnail_path)
+            sg_metadata["thumbnail_path"] = (thumbnail_path, attachment_id)
+            
         # format as yaml data:
         sg_metadata_str = yaml.dump(sg_metadata)
         
@@ -96,22 +83,49 @@ class StorePublishData(sgtk.Hook):
             # when the file is opened for add, edit or delete.  This will ensure subsequent
             # changes to the file retain this information unless it's modified by a future
             # publish
-            p4.run_attribute("-p", "-n", "shotgun_metadata", "-v", sg_metadata_str, local_path)
+            p4.run_attribute("-p", "-n", StorePublishData.PUBLISH_ATTRIB_NAME, "-v", sg_metadata_str, local_path)
         except P4Exception, e:
             raise TankError("Failed to store publish data in Perforce attribute for file '%s'" % local_path)
 
         # clear the 'shotgun_review_metadata' attribute.  This handles the following
         # case where review data shouldn't be linked to the published file(s):
         #
-        # 1. Publish with review
+        # 1. Publish with review - _don't_ commit to Perforce
         # 2. Publish _without_ review
         # 3. Commit to Perforce
         try:
-            p4.run_attribute("-n", "shotgun_review_metadata", local_path)
+            p4.run_attribute("-n", StorePublishData.REVIEW_ATTRIB_NAME, local_path)
         except P4Exception, e:
             raise TankError("Failed to clear review data in Perforce attribute for file '%s'" % local_path)
-            
+
+
+    def __upload_file_to_sg(self, file_path):
+        """
+        Upload the specified file to Shotgun as an attachment to the current project
+        """
+        # first check if the file has already been uploaded or not:
+        if not hasattr(self.parent, "__sg_uploaded_file_cache"):
+            self.parent.__sg_uploaded_file_cache = {}
+        cache = self.parent.__sg_uploaded_file_cache
         
+        file_size = os.path.getsize(file_path)
+        file_mtime = os.path.getmtime(file_path)
+        file_key = (file_path, file_size, file_mtime)
+        
+        attachment_id = cache.get(file_key)
+        if attachment_id is not None:
+            # file has previously been uploaded as an attachment
+            # so just return the id:
+            return attachment_id
+        
+        # upload file to shotgun, linking to the project:
+        attachment_id = self.parent.shotgun.upload("Project", self.parent.context.project["id"], file_path)
+        cache[file_key] = attachment_id
+        
+        # and update the attachment with a useful description:
+        self.parent.shotgun.update("Attachment", attachment_id, {"description":"Perforce publish data"})
+    
+        return attachment_id
         
 
 
