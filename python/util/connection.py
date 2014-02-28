@@ -134,14 +134,14 @@ class ConnectionHandler(object):
         
         return None
     
-    def connect(self, allow_ui=True, password=None):
+    def connect(self, allow_ui=True, user=None, password=None):
         """
         Utility method that returns a connection using the current configuration.  If a connection
         can't be established and the user is in ui mode then they will be prompted to edit the
         connection details.
         """
         server = self._fw.get_setting("server")
-        user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
+        user = user or self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
         workspace = self._get_current_workspace()
 
         try:
