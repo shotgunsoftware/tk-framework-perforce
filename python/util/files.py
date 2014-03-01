@@ -13,13 +13,9 @@ Common utilities for working with Perforce files
 """
 
 import os
-from P4 import P4Exception
-
-from sgtk import TankError
-
 import re
-
-DEFAULT_FSTAT_FIELDS = ["clientFile", "depotFile", "haveRev", "headRev"]
+from P4 import P4Exception, Map as P4Map # Prefix P4 for consistency
+from sgtk import TankError
 
 def client_to_depot_paths(p4, client_paths):
     """
@@ -32,12 +28,19 @@ def client_to_depot_paths(p4, client_paths):
     """
     if isinstance(client_paths, basestring):
         client_paths = [client_paths]
+        
+    # check that all client paths are actually under the current workspace root
+    # otherwise fstat will raise an exception:
+    client_root = __get_client_root(p4)
+    # (TODO) - this might need to be a little more robust!
+    valid_client_paths = [path for path in client_paths if path.startswith(client_root)]
     
-    client_file_details = get_client_file_details(p4, client_paths)
+    client_file_details = get_client_file_details(p4, valid_client_paths)
     depot_paths = []
     for client_path in client_paths:
         depot_path = client_file_details.get(client_path, {}).get("depotFile", "")
         depot_paths.append(depot_path)
+        
     return depot_paths    
 
 def depot_to_client_paths(p4, depot_paths):
@@ -52,14 +55,18 @@ def depot_to_client_paths(p4, depot_paths):
     if isinstance(depot_paths, basestring):
         depot_paths = [depot_paths]
             
-    depot_file_details = get_depot_file_details(p4, depot_paths)
+    # filter list of depot paths that are mapped in the current client:
+    map = __get_client_view(p4)
+    mapped_depot_paths = [path for path in depot_paths if map.includes(path)]
+            
+    depot_file_details = get_depot_file_details(p4, mapped_depot_paths)
     client_paths = []
     for depot_path in depot_paths:
         client_path = depot_file_details.get(depot_path, {}).get("clientFile", "")
         client_paths.append(client_path)
     return client_paths
 
-def get_client_file_details(p4, paths, fields = DEFAULT_FSTAT_FIELDS, flags = []):
+def get_client_file_details(p4, paths, fields = [], flags = []):
     """
     Return file details for the specified list of local/client paths as 
     a dictionary keyed by the local/client path.
@@ -70,10 +77,13 @@ def get_client_file_details(p4, paths, fields = DEFAULT_FSTAT_FIELDS, flags = []
     :param flags:     List of additional flags to pass to fstat
     """
     if isinstance(paths, basestring):
-        paths = [paths]    
-    return __run_fstat(p4, paths, ["clientFile", "headRev"] + fields, flags, "clientFile")
+        paths = [paths]
+        
+    # (AD) - does this also need to filter input list?
+        
+    return __run_fstat_and_aggregate(p4, paths, fields, flags, "clientFile")
     
-def get_depot_file_details(p4, paths, fields = DEFAULT_FSTAT_FIELDS, flags = []):
+def get_depot_file_details(p4, paths, fields = [], flags = []):
     """
     Return file details for the specified list of depot paths as 
     a dictionary keyed by the depot path.
@@ -85,7 +95,10 @@ def get_depot_file_details(p4, paths, fields = DEFAULT_FSTAT_FIELDS, flags = [])
     """
     if isinstance(paths, basestring):
         paths = [paths]    
-    return __run_fstat(p4, paths, ["depotFile", "headRev"] + fields, flags, "depotFile")
+    
+    # (AD) - does this also need to filter input list?  What if there is no client?
+    
+    return __run_fstat_and_aggregate(p4, paths, fields, flags, "depotFile")
 
 def check_out_file(p4, path, add_if_not_exists=False):
     """
@@ -113,7 +126,7 @@ def check_out_file(p4, path, add_if_not_exists=False):
                 raise TankError("Perforce: Failed to add file - %s" % (p4.errors[0] if p4.errors else e))
     else:
         if "action" not in file_stat or file_stat["action"] != "edit":
-            # (AD) - TODO - check if file is latest! - what about other actions (delete, etc.)
+            # (TODO) - check if file is latest! - what about other actions (delete, etc.)
             try:
                 p4.run_edit(path)
             except P4Exception, e:
@@ -122,8 +135,37 @@ def check_out_file(p4, path, add_if_not_exists=False):
     if not file_stat:
         raise TankError("Perforce: File '%s' does not exist in depot!" % path)
 
+def __get_client_root(p4):
+    """
+    Get the local root directory for the current workspace (as set
+    in the p4 instance)
+    
+    :param p4:    The Perforce connection to use
+    :returns:     The workspace root directory if found
+    """
+    try:
+        client_spec = p4.fetch_client(p4.client)
+        return client_spec._root.rstrip("\\/") + os.path.sep
+    except P4Exception, e:
+        raise TankError("Perforce: Failed to query the workspace root for user '%s', workspace '%s': %s" 
+                        % (p4.user, p4.client, p4.errors[0] if p4.errors else e))
+        
+def __get_client_view(p4):
+    """
+    Get the view/mapping for the current workspace and user (as set
+    in the p4 instance)
+    
+    :param p4:    The Perforce connection to use
+    :returns:     The workspace root directory if found
+    """
+    try:
+        client_spec = p4.fetch_client(p4.client)
+        return P4Map(client_spec._view)
+    except P4Exception, e:
+        raise TankError("Perforce: Failed to query the workspace view/mapping for user '%s', workspace '%s': %s" 
+                        % (p4.user, p4.client, p4.errors[0] if p4.errors else e))      
 
-def __run_fstat(p4, file_paths, fields, flags, type):
+def __run_fstat_and_aggregate(p4, file_paths, fields, flags, type, ignore_deleted=True):
     """
     Return file details for the specified list of paths by calling
     fstat on them.
@@ -139,37 +181,51 @@ def __run_fstat(p4, file_paths, fields, flags, type):
     if not file_paths:
         return {}
     
+    if fields:
+        # ensure type headRev and headAction are included in
+        # the fields so we can extrapolate the results
+        fields = list(fields)
+        for required_field in [type, "headRev", "headAction"]:
+            if not required_field in fields:
+                fields.append(required_field)
+
+    # set up list of flags to pass to fstat:
+    flags = list(flags) if flags else []
+
+    # special case handling for querying attributes as this requires
+    # the -Oa flag to be passed
+    if "-Oa" not in flags:
+        for field in fields:
+            if (field.startswith("attr-") or field.startswith("attrProp-")
+                or field.startswith("openattr-") or field.startswith("openattrProp-")):
+                flags.append("-Oa")
+                break
+    
+    # ensure any fields follow -T flag:
+    if "-T" in flags:
+        flags.remove("-T")
+    if fields:
+        fields_str = ",".join(fields)
+        flags.append("-T")
+        flags.append(fields_str)
+        
+    if ignore_deleted:
+        # use filter to only return new additions/files:
+        flags.append("-F")
+        flags.append("^headAction=delete ^headAction=move/delete ^headAction=purge ^headAction=archive")
+    
     # query files using fstat
     p4_res = []
     try:
-        # set up list of flags to pass to fstat:
-        flags = list(flags) if flags else []
-
-        # special case handling for querying attributes as this requires
-        # the -Oa flag to be passed
-        if "-Oa" not in flags:
-            for field in fields:
-                if (field.startswith("attr-") or field.startswith("attrProp-")
-                    or field.startswith("openattr-") or field.startswith("openattrProp-")):
-                    flags.append("-Oa")
-                    break
-        
-        # ensure any fields follow -T flag:
-        if "-T" in flags:
-            flags.remove("-T")
-        if fields:
-            fields_str = ",".join(fields)
-            flags.append("-T")
-            flags.append(fields_str)
-            
-        # run fstat:
         p4_res = p4.run_fstat(flags, file_paths)
     except P4Exception, e:
         # under normal circumstances, this shouldn't happen so just raise a TankError.
         raise TankError("Perforce: Failed to run fstat on file(s) - %s" % (p4.errors[0] if p4.errors else e))
     
     # match up results with files:
-    # build a lookup with file_path & headrevision:
+    # build a lookup with file_path & headRev
+    # headRev is the revision of the result returned, haveRev is the revision
+    # currently synced.  All returned results should have a headRev 
     p4_res_lookup = {}
     for item in p4_res:
         if type not in item or "headRev" not in item:
