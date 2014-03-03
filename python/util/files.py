@@ -14,8 +14,96 @@ Common utilities for working with Perforce files
 
 import os
 import re
+import urllib
+import urlparse
+
 from P4 import P4Exception, Map as P4Map # Prefix P4 for consistency
 from sgtk import TankError
+
+# regex to split out path and revision from a Perforce path
+PATH_REVISION_REGEX = re.compile("(?P<path>.+)#(?P<revision>[0-9]+)$")
+
+URL_REVISION_PARAM_REGEX = re.compile("^rev=(?P<revision>[0-9]+)$")
+
+# ensure that parsing Perforce url's seperates out the netloc and params
+PERFORCE_SCHEME = "perforce"
+if PERFORCE_SCHEME not in urlparse.uses_netloc:
+    urlparse.uses_netloc.append(PERFORCE_SCHEME)
+    urlparse.uses_params.append(PERFORCE_SCHEME)
+    
+def url_from_depot_path(p4, depot_path, revision=None):
+    """
+    Construct a uniform perforce url for the specified
+    depot path.  The depot path will already be quoted
+    correctly.  
+    
+    The url will be of the form:
+    
+        perforce://server:port/depot/path/to/the/file;rev=#
+    
+    :param p4:            The current Perforce connection
+    :param depot_path:    The depot path to construct a url for
+    :returns:             url representing the specified depot path
+    """
+    # remove double slashes at start of path:
+    url_path = "/%s" % depot_path.lstrip("/")
+    
+    # if revision is specified then append it to the path:
+    params = ""
+    if revision != None:
+        params = "rev=%d" % revision
+    
+    # add server & port
+    netloc = ""
+    if p4.port.isdigit():
+        # assume p4.port is port on localhost:
+        netloc = "localhost:%s" % p4.port
+    else:
+        netloc = p4.port
+    
+    # construct url:
+    return urlparse.urlunparse((PERFORCE_SCHEME, netloc, url_path, params, "", ""))
+
+def depot_path_from_url(p4, url, validate_server=True):
+    """
+    Extract the depot path from a perforce url of the form:
+    
+    perforce://server:port/depot/path/to/the/file
+    
+    :param p4:            The current Perforce connection
+    :param url:                The url to extract the path from
+    :param validate_server:    If True then validate that the server matches
+                               the current Perforce connection 
+    """
+    res = urlparse.urlparse(url)
+    if res.scheme != PERFORCE_SCHEME:
+        return
+    
+    if validate_server:
+        server_is_valid = False
+        if p4.port == res.netloc:
+            server_is_valid = True
+        elif p4.port.isdigit():
+            # p4.port is local port so check for localhost:
+            if res.netloc == "localhost:%s" % p4.port:
+                server_is_valid = True
+             
+        if not server_is_valid:
+            return
+
+    depot_path = "//%s" % res.path.lstrip("/")
+
+    # check to see if a revision is specified in the params:
+    revision = None
+    if res.params:
+        for param in res.params.split("&"):
+            mo = URL_REVISION_PARAM_REGEX.match(param)
+            if mo:
+                revision = mo.group("revision")
+
+    # return valid depot path:    
+    return (depot_path, revision)
+    
 
 def client_to_depot_paths(p4, client_paths):
     """
@@ -99,6 +187,38 @@ def get_depot_file_details(p4, paths, fields = [], flags = []):
     # (AD) - does this also need to filter input list?  What if there is no client?
     
     return __run_fstat_and_aggregate(p4, paths, fields, flags, "depotFile")
+
+def sync_published_file(p4, published_file_entity, latest=True):#, dependencies=True):
+    """
+    Sync the specified published file to the current workspace.
+    """
+    # depot path is stored in the path as a url:
+    p4_url = published_file_entity.get("path", {}).get("url")
+        
+    # convert from perforce url, validating server:
+    path_and_revision = depot_path_from_url(p4, p4_url)
+    depot_path = path_and_revision[0] if path_and_revision else None
+    if not depot_path:
+        # either an invalid path or different server so skip
+        raise TankError("Failed to find Perforce file revision for %s" % p4_url)
+
+    revision = None
+    if not latest:
+        revision = published_file_entity.get("version_number")
+
+    sync_args = []
+    sync_path = depot_path
+    if revision:
+        sync_path = "%s#%d" % (depot_path, revision)
+    
+    # sync file:
+    try:        
+        p4.run_sync(sync_args, sync_path)
+    except P4Exception, e:
+        raise TankError("Perforce: Failed to sync file %s - %s" % (sync_path, p4.errors[0] if p4.errors else e))
+    
+    # (TODO) handle dependencies
+    # ...
 
 def check_out_file(p4, path, add_if_not_exists=False):
     """
@@ -235,9 +355,6 @@ def __run_fstat_and_aggregate(p4, file_paths, fields, flags, type, ignore_delete
         path_key = item[type].replace("\\", "/")
         
         p4_res_lookup.setdefault(path_key, dict())[head_rev] = item
-        
-    # regex to split out path and revision from a Perforce path
-    regex = re.compile("(?P<path>.+)#(?P<revision>[0-9]+)$")
     
     p4_file_details = {}
     for file_path in file_paths:
@@ -248,7 +365,7 @@ def __run_fstat_and_aggregate(p4, file_paths, fields, flags, type, ignore_delete
         file_rev = None
         
         # see if the paths is a path#version combination:
-        mo = regex.match(file_key)
+        mo = PATH_REVISION_REGEX.match(file_key)
         if mo:
             file_key = mo.group("path").strip()
             file_rev = int(mo.group("revision").strip())
