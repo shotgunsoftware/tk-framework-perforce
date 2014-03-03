@@ -12,8 +12,6 @@
 Per-user setting management
 """
 
-from sgtk.platform.qt import QtGui, QtCore
-
 class UserSettings(object):
     """
     """
@@ -52,6 +50,10 @@ class UserSettings(object):
     def _load_settings(self):
         """
         """
+        from sgtk.platform.qt import QtCore
+        if not hasattr(QtCore, "QSettings"):
+            return {}        
+        
         q_settings = QtCore.QSettings(UserSettings.ORGANIZATION, UserSettings.APPLICATION)
         
         settings = {}
@@ -70,6 +72,10 @@ class UserSettings(object):
     def _save_settings(self, settings):
         """
         """
+        from sgtk.platform.qt import QtCore
+        if not hasattr(QtCore, "QSettings"):
+            return
+                
         q_settings = QtCore.QSettings(UserSettings.ORGANIZATION, UserSettings.APPLICATION)
         
         q_settings.beginWriteArray(self._prefix)

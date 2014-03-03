@@ -98,7 +98,8 @@ class ConnectionHandler(object):
         
         login_req = self._login_required()
         if login_req:
-            if self._do_login(True, parent_widget) != True:
+            logged_in, _ = self._do_login(True, parent_widget)
+            if not logged_in:
                 raise TankError("Unable to login user %s without a password!" % user)
     
     def _prompt_for_workspace(self, user, initial_ws, parent_widget=None):
@@ -161,23 +162,23 @@ class ConnectionHandler(object):
                     if password:
                         self._p4.password = password
                         
-                    res = self._do_login(allow_ui)
-                    p4_widgets = self._fw.import_module("widgets")
-                    if res == p4_widgets.PasswordForm.SHOW_DETAILS:
+                    logged_in, show_details = self._do_login(allow_ui)
+                    if show_details:
                         # switch to connection dialog
                         raise TankError()
-                    elif not res:
+                    elif not logged_in:
                         # user cancelled log-in!
                         return
             except SgtkP4Error, e:
                 raise TankError("Perforce: Failed to log-in user '%s' - %s" % (user, e))
                 
             # finally, validate the workspace:
-            try:
-                self._validate_workspace(workspace, user)
-                self._p4.client = str(workspace)
-            except SgtkP4Error, e:
-                raise TankError("Perforce: Workspace '%s' is not valid! - %s" % (workspace, e))
+            if workspace:
+                try:
+                    self._validate_workspace(workspace, user)
+                    self._p4.client = str(workspace)
+                except SgtkP4Error, e:
+                    raise TankError("Perforce: Workspace '%s' is not valid! - %s" % (workspace, e))
                 
             return self._p4
             
@@ -242,7 +243,7 @@ class ConnectionHandler(object):
 
     def _do_login(self, allow_ui=True, parent_widget=None):
         """
-        :return: Bool - True if the user successfully logged in, False otherwise 
+        :return: Tuple (success, show_details) - success = True if the user successfully logged in, False otherwise 
         """
         error_msg = None
         is_first_attempt = True
@@ -259,7 +260,7 @@ class ConnectionHandler(object):
                 error_msg = self._p4.errors[0] if self._p4.errors else str(e)
             else:
                 # successfully logged in!
-                return True
+                return (True, False)
             
             if allow_ui and self._fw.engine.has_ui:
             
@@ -271,10 +272,10 @@ class ConnectionHandler(object):
                 
                 if res == p4_widgets.PasswordForm.SHOW_DETAILS:
                     # just return the result:
-                    return res
+                    return (False, True)
                 elif res != QtGui.QDialog.Accepted:
                     # User hit cancel!
-                    return False
+                    return (False, False)
 
                 # update password for next iteration:                
                 self._p4.password = password
