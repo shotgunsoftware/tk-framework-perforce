@@ -12,12 +12,13 @@
 Hook that gets called to store publish data for a path being submitted to Perforce
 """
 
-import sgtk
-from tank_vendor import yaml
-
 import os
 import sys
 import copy
+
+import sgtk
+from sgtk import TankError
+from tank_vendor import yaml
  
 class StoreReviewData(sgtk.Hook):
     
@@ -64,6 +65,7 @@ class StoreReviewData(sgtk.Hook):
         depot_publish_paths = p4_util.client_to_depot_paths(p4, local_publish_paths)
         for local, depot in zip(local_publish_paths, depot_publish_paths):
             if not depot:
+                # (AD) - this doesn't handle new files!
                 raise TankError("Failed to determine Perforce depot path for local file '%s'" % local)
         
         # iterate over review metadata:
