@@ -57,15 +57,14 @@ class StorePublishData(sgtk.Hook):
                         parameters expected by the 'sgtk.util.register_publish()' function.
         """
         p4_fw = self.parent
-        p4_util = p4_fw.import_module("util")
 
         # we'll need a Perforce connection:
-        p4 = p4_fw.connect()
+        p4 = p4_fw.connection.connect()
         
         # all publish paths stored in Shotgun are depot paths so first we need
         # to convert all paths in the data to depot paths:
         dependency_paths = publish_data.get("dependency_paths", [])
-        p4_file_details = p4_util.get_client_file_details(p4, [local_path] + dependency_paths)
+        p4_file_details = p4_fw.util.get_client_file_details(p4, [local_path] + dependency_paths)
         
         depot_path = p4_file_details[local_path].get("depotFile")
         if not depot_path:

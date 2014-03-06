@@ -54,16 +54,15 @@ class LoadPublishData(sgtk.Hook):
         # If a thumbnail was specified in the publish_data then this will have been
         # stored as a project attachment and will need to be downloaded.         
         p4_fw = self.parent
-        p4_util = p4_fw.import_module("util")
         from P4 import P4Exception
 
         # we'll need a Perforce connection:
-        p4 = p4_fw.connect()
+        p4 = p4_fw.connection.connect()
 
         # get the attribute data from Perforce:        
         p4_attr_name = "attr-%s" % LoadPublishData.PUBLISH_ATTRIB_NAME
         depot_revision_path = "%s#%d" % (depot_path, revision)
-        file_details = p4_util.get_depot_file_details(p4, depot_revision_path, fields = [p4_attr_name])
+        file_details = p4_fw.util.get_depot_file_details(p4, depot_revision_path, fields = [p4_attr_name])
         
         # find data and load yaml data:
         sg_metadata_str = file_details[depot_revision_path].get(p4_attr_name)        

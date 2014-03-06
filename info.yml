@@ -12,16 +12,26 @@
 
 # expected fields in the configuration file for this engine
 configuration:
-        
+
     server:
         type: str
-        description: "Perforce server to connect to.  Should be of the form: 'server:port', 
-                     e.g. 'localhost:1666'"
-        default_value: "1666"
+        description: "Perforce server to connect to.  Should be of the form: 'protocol:server:port'. 
+                     e.g. 'tcp:localhost:1666'"
+        
+    server_aliases:
+        type: list
+        values:
+            type: str
+        allows_empty: True
+        default_value: []
+        description: "A list of aliases for the Perforce server - if the Perforce server is moved or
+                      given a new protocol, name or port, adding the original to this list will allow
+                      Toolkit to continue using publishes that were published to the old server.  The
+                      current server should always be specified in the 'server' setting."
         
     server_version:
         type: float
-        description: "Version of Perforce Server to connect to"
+        description: "Version of the Perforce Server to connect to."
         default_value: 2012.1
     
     host:
@@ -34,31 +44,39 @@ configuration:
         type: hook
         parameters: [sg_user]
         default_value: get_perforce_user
+        description: "Specify a hook that will return the Perforce user name for a specified Shotgun
+                      user name"
 
     hook_get_shotgun_user:
         type: hook
         parameters: [p4_user]
         default_value: get_shotgun_user
+        description: "Specify a hook that will return the Shotgun user name for a specified Perforce
+                      user name"
         
     hook_store_publish_data:
         type: hook
         parameters: [local_path, publish_data]
         default_value: store_publish_data
+        description: ''
 
     hook_load_publish_data:
         type: hook
         parameters: [depot_path, user, workspace, revision]
         default_value: load_publish_data
-
+        description: ''
+        
     hook_store_review_data:
         type: hook
         parameters: [local_publish_paths, version_data]
         default_value: store_review_data
-
+        description: ''
+        
     hook_load_review_data:
         type: hook
         parameters: [depot_path, user, workspace, revision]
         default_value: load_review_data
+        description: ''
         
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:

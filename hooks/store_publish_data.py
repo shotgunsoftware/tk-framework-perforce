@@ -49,16 +49,15 @@ class StorePublishData(sgtk.Hook):
         sg_metadata = copy.deepcopy(publish_data)
                         
         p4_fw = self.parent
-        p4_util = p4_fw.import_module("util")
         from P4 import P4Exception
 
         # we'll need a Perforce connection:
-        p4 = p4_fw.connect()
+        p4 = p4_fw.connection.connect()
         
         # convert dependencies from local to depot paths:
         dependency_paths = sg_metadata.get("dependency_paths", [])
         if dependency_paths:
-            depot_dependency_paths = p4_util.client_to_depot_paths(p4, dependency_paths)
+            depot_dependency_paths = p4_fw.util.client_to_depot_paths(p4, dependency_paths)
             depot_dependency_paths = [dp for dp in depot_dependency_paths if dp]
             sg_metadata["dependency_paths"] = depot_dependency_paths
 

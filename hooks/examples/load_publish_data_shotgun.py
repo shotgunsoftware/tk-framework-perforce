@@ -67,10 +67,9 @@ class LoadPublishData(sgtk.Hook):
                         the parameters expected by the 'sgtk.util.register_publish()' function.
         """
         p4_fw = self.parent
-        p4_util = p4_fw.import_module("util")
 
         # we'll need a Perforce connection:
-        p4 = p4_fw.connect()
+        p4 = p4_fw.connection.connect()
         
         # look for a PendingPublishedFile entity in Shotgun that matches the depot path, workspace & user
         filters = [["project", "is", p4_fw.context.project],

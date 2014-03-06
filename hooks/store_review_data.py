@@ -51,18 +51,17 @@ class StoreReviewData(sgtk.Hook):
             return None
 
         p4_fw = self.parent
-        p4_util = p4_fw.import_module("util")
         from P4 import P4Exception
 
         # we'll need a Perforce connection:
-        p4 = p4_fw.connect()
+        p4 = p4_fw.connection.connect()
         
         # we're going to store the version data with each published file the version
         # will ultimately be linked to.        
         sg_review_metadata = copy.deepcopy(version_data)
 
         # we'll also need depot paths for all local paths:
-        depot_publish_paths = p4_util.client_to_depot_paths(p4, local_publish_paths)
+        depot_publish_paths = p4_fw.util.client_to_depot_paths(p4, local_publish_paths)
         for local, depot in zip(local_publish_paths, depot_publish_paths):
             if not depot:
                 # (AD) - this doesn't handle new files!
@@ -101,7 +100,7 @@ class StoreReviewData(sgtk.Hook):
         
         # get any existing attribute information: 
         p4_openattr_name = "openattr-%s" % StoreReviewData.REVIEW_ATTRIB_NAME
-        local_file_attribs = p4_util.get_client_file_details(p4, local_publish_paths, 
+        local_file_attribs = p4_fw.util.get_client_file_details(p4, local_publish_paths, 
                                                              fields = [p4_openattr_name])
 
         # now update for each path:

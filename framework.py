@@ -23,28 +23,28 @@ class PerforceFramework(sgtk.platform.Framework):
     # init and destroy
             
     def init_framework(self):
+        """
+        Construction
+        """
         self.log_debug("%s: Initializing..." % self)
         
         # initialize p4python:
         self.__init_p4python()
+        
+        # add modules to this instance so the interface is nicer for users
+        # allows fw.util type syntax.
+        self.connection = self.import_module("connection")
+        self.util = self.import_module("util")
+        self.widgets = self.import_module("widgets")
     
     def destroy_framework(self):
+        """
+        Destruction
+        """
         self.log_debug("%s: Destroying..." % self)
     
-    def connect(self, allow_ui=True, user=None, password=None):
-        """
-        Connect to Perforce
-        """
-        util = self.import_module("util")
-        return util.ConnectionHandler(self).connect(allow_ui, user, password)
-        
-    def connect_with_dlg(self):
-        """
-        Show the Perforce connection dialog
-        """
-        util = self.import_module("util")
-        return util.ConnectionHandler(self).connect_with_dlg()
-    
+    # Username handling (via hooks)
+    #
     def get_perforce_user(self, sg_user):
         """
         Return the Perforce user associated with the specified Shotgun user
@@ -57,7 +57,8 @@ class PerforceFramework(sgtk.platform.Framework):
         """
         return self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
         
-        
+    # store/load publish data
+    #
     def store_publish_data(self, local_path, publish_data):
         """
         Store the publish data for the specified path somewhere using a hook
@@ -77,6 +78,8 @@ class PerforceFramework(sgtk.platform.Framework):
                                  workspace = workspace,
                                  revision = revision)
 
+    # store/load review data
+    #
     def store_publish_review_data(self, local_publish_paths, version_data):
         """
         Store review 'version' data for the specified publish paths
@@ -97,7 +100,8 @@ class PerforceFramework(sgtk.platform.Framework):
                                  workspace = workspace,
                                  revision = revision)
 
-        
+    # private methods
+    #    
     def __init_p4python(self):
         """
         Make sure that p4python is available and if it's not then add it to the path if 

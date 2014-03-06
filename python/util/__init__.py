@@ -8,11 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-from .connection import ConnectionHandler
-
 from .files import get_client_file_details, get_depot_file_details, check_out_file, sync_published_file
 from .files import client_to_depot_paths, depot_to_client_paths
-from .files import depot_path_from_url, url_from_depot_path
-                
 from .change import create_change, add_to_change, find_change_containing, submit_change
-
+from .url import url_from_depot_path, depot_path_from_url

@@ -123,8 +123,8 @@ class ConnectionHandler(object):
 
         # show the password entry dialog:        
         try:
-            p4_widgets = self._fw.import_module("widgets")
-            res, widget = self._fw.engine.show_modal("Perforce Workspace", self._fw, p4_widgets.SelectWorkspaceForm, 
+            from ..widgets import SelectWorkspaceForm
+            res, widget = self._fw.engine.show_modal("Perforce Workspace", self._fw, SelectWorkspaceForm, 
                                                      self._p4.port, user,
                                                      filtered_workspaces, initial_ws, parent_widget)
             if res == QtGui.QDialog.Accepted:
@@ -215,14 +215,13 @@ class ConnectionHandler(object):
         user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sg_user)
         
         try:
-            
-            p4_widgets = self._fw.import_module("widgets")
+            from ..widgets import OpenConnectionForm
         
             # get initial user & workspace from settings:    
             initial_workspace = self._get_current_workspace()
             
             # show the connection dialog:
-            result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, p4_widgets.OpenConnectionForm, 
+            result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, OpenConnectionForm, 
                                                    server, user, sg_user, initial_workspace, self._setup_connection_dlg)
            
             if result == QtGui.QDialog.Accepted:
@@ -230,8 +229,9 @@ class ConnectionHandler(object):
                 self._save_current_workspace(self._p4.client)
                 return self._p4
 
-        except:
-            pass
+        except Exception, e:
+            print e
+            
         
         return None
 
@@ -265,12 +265,12 @@ class ConnectionHandler(object):
             if allow_ui and self._fw.engine.has_ui:
             
                 # prompt for a password in the main thread:
-                p4_widgets = self._fw.import_module("widgets")
+                from ..widgets import PasswordForm                
                 res, password = self._fw.engine.execute_in_main_thread(self._prompt_for_password,
                                                                        None if is_first_attempt else ("Log-in failed: %s" % error_msg),
                                                                        parent_widget)
                 
-                if res == p4_widgets.PasswordForm.SHOW_DETAILS:
+                if res == PasswordForm.SHOW_DETAILS:
                     # just return the result:
                     return (False, True)
                 elif res != QtGui.QDialog.Accepted:
@@ -289,8 +289,8 @@ class ConnectionHandler(object):
         """
         """
         # show the password entry dialog:
-        p4_widgets = self._fw.import_module("widgets")
-        res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, p4_widgets.PasswordForm,
+        from ..widgets import PasswordForm
+        res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, PasswordForm,
                                                  self._p4.port, self._p4.user, (parent_widget == None), 
                                                  error_msg, parent_widget)
         
@@ -464,21 +464,18 @@ class ConnectionHandler(object):
     
         # user isn't logged in!
         return True   
-    
-def connect_with_dlg(fw):
-    """
-    """
-    
-    handler = ConnectionHandler(fw)
-    return handler.connect_with_dlg()
-    
-def connect(fw):
-    """
-    """
-    handler = ConnectionHandler(fw)
-    return handler.connect()
-    
 
-
-
+def connect(allow_ui=True, user=None, password=None):
+    """
+    Connect to Perforce
+    """
+    fw = sgtk.platform.current_bundle()    
+    return ConnectionHandler(fw).connect(allow_ui, user, password)
+    
+def connect_with_dialog():
+    """
+    Show the Perforce connection dialog
+    """
+    fw = sgtk.platform.current_bundle()    
+    return ConnectionHandler(fw).connect_with_dlg()
     
