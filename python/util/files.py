@@ -24,6 +24,7 @@ from .url import depot_path_from_url
 
 # regex to split out path and revision from a Perforce path
 PATH_REVISION_REGEX = re.compile("(?P<path>.+)#(?P<revision>[0-9]+)$")
+PATH_CHANGE_REGEX = re.compile("(?P<path>.+)@(?P<change>[0-9]+)$")
 
 def client_to_depot_paths(p4, client_paths):
     """
@@ -42,6 +43,8 @@ def client_to_depot_paths(p4, client_paths):
     client_root = __get_client_root(p4)
     # (TODO) - this might need to be a little more robust!
     valid_client_paths = [path for path in client_paths if path.startswith(client_root)]
+
+    # use: -Rc - Limit output to files mapped into the current workspace.
     
     client_file_details = get_client_file_details(p4, valid_client_paths)
     depot_paths = []
@@ -265,30 +268,36 @@ def __run_fstat_and_aggregate(p4, file_paths, fields, flags, type, ignore_delete
     # match up results with files:
     # build a lookup with file_path & headRev
     # headRev is the revision of the result returned, haveRev is the revision
-    # currently synced.  All returned results should have a headRev 
+    # currently synced.  All returned results should have a headRev
     p4_res_lookup = {}
     for item in p4_res:
         if type not in item or "headRev" not in item:
             continue
         
-        head_rev = int(item["headRev"])
         path_key = item[type].replace("\\", "/")
-        
-        p4_res_lookup.setdefault(path_key, dict())[head_rev] = item
-    
+        p4_res_lookup.setdefault(path_key, dict())[int(item["headRev"])] = item
+                
     p4_file_details = {}
     for file_path in file_paths:
         # support file_path of forms:
         #   foo/bar.png
         #   foo/bar.png#version
+        #   foo/bar.png@change
         file_key = file_path.replace("\\", "/")
         file_rev = None
+        file_change = None
         
-        # see if the paths is a path#version combination:
+        # see if the path is a path#version combination:
         mo = PATH_REVISION_REGEX.match(file_key)
         if mo:
             file_key = mo.group("path").strip()
             file_rev = int(mo.group("revision").strip())
+        else:
+            # see if the path is a path@change combination:
+            mo = PATH_CHANGE_REGEX.match(file_key)
+            if mo:
+                file_key = mo.group("path").strip()
+                file_change = int(mo.group("change").strip())
 
         # find the file details for this path:
         file_details = {}
