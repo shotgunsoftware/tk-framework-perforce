@@ -67,33 +67,25 @@ class StoreReviewData(sgtk.Hook):
                 # (AD) - this doesn't handle new files!
                 raise TankError("Failed to determine Perforce depot path for local file '%s'" % local)
         
-        # iterate over review metadata:
-        attachment_map = {}
-        for item in sg_review_metadata:
+        # add published file paths in to the data:
+        sg_review_metadata["published_files"] = depot_publish_paths
             
-            # add published file paths in to the data:
-            item["published_files"] = depot_publish_paths
+        # handle sg_path_to_frames if set:
+        path_to_frames = sg_review_metadata.get("sg_path_to_frames")
+        if path_to_frames:
+            # (TODO) convert to depot path:
+            pass
             
-            # handle sg_path_to_frames if set:
-            path_to_frames = item.get("sg_path_to_frames")
-            if path_to_frames:
-                # (TODO) convert to depot path:
-                pass
-            
-            # upload any files to Shotgun and replace in data with attachment id's:
-            # Q. are there other fields on the "Version" entity that may contain
-            # files that need to be stored?
-            review_file = item.get("sg_uploaded_movie")
-            if review_file:
-                attachment_id = None                
-                if os.path.exists(review_file):
-                    # have we already uploaded this movie:
-                    attachment_id = attachment_map.get(review_file, None)
-                    if attachment_id is None:
-                        # upload:
-                        attachment_id = self.__upload_file_to_sg(review_file)
-                        attachment_map[review_file] = attachment_id
-                item["sg_uploaded_movie"] = attachment_id
+        # upload any files to Shotgun and replace in data with attachment id's:
+        # Q. are there other fields on the "Version" entity that may contain
+        # files that need to be stored?
+        review_file = sg_review_metadata.get("sg_uploaded_movie")
+        if review_file:
+            del(sg_review_metadata["sg_uploaded_movie"])
+            if os.path.exists(review_file):
+                # upload movie:
+                attachment_id = self.__upload_file_to_sg(review_file)
+                sg_review_metadata["sg_uploaded_movie"] = attachment_id
 
         # store the review data as a Perforce attribute on each published file:
         #
@@ -103,22 +95,11 @@ class StoreReviewData(sgtk.Hook):
         local_file_attribs = p4_fw.util.get_client_file_details(p4, local_publish_paths, 
                                                              fields = [p4_openattr_name])
 
-        # now update for each path:
-        for local_path in local_publish_paths:
-            
-            # get any existing review data - we don't want to overwrite it:
-            existing_review_metadata = []
-            sg_metadata_str = local_file_attribs[local_path].get(p4_openattr_name)
-            if sg_metadata_str:
-                existing_review_metadata = yaml.load(sg_metadata_str)
-    
-            # add in new data:
-            existing_review_metadata.append(sg_review_metadata)
-    
-            # dump to yaml string:
-            sg_metadata_str = yaml.dump(existing_review_metadata)
+        # dump to yaml string:
+        sg_metadata_str = yaml.dump(sg_review_metadata)
 
-            # and update attribute with new data:
+        # update attribute for each path:
+        for local_path in local_publish_paths:
             try:                
                 p4.run_attribute("-n", StoreReviewData.REVIEW_ATTRIB_NAME, "-v", sg_metadata_str, local_path)
             except P4Exception, e:
