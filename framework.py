@@ -36,6 +36,9 @@ class PerforceFramework(sgtk.platform.Framework):
         self.connection = self.import_module("connection")
         self.util = self.import_module("util")
         self.widgets = self.import_module("widgets")
+        
+        self.__p4_to_sg_user_map = {}
+        self.__sg_to_p4_user_map = {}
     
     def destroy_framework(self):
         """
@@ -49,13 +52,23 @@ class PerforceFramework(sgtk.platform.Framework):
         """
         Return the Perforce user associated with the specified Shotgun user
         """
-        return self.execute_hook("hook_get_perforce_user", sg_user = sg_user)
+        if sg_user["id"] in self.__sg_to_p4_user: 
+            return self.__sg_to_p4_user_map[sg_user["id"]]
+        
+        p4_user = self.execute_hook("hook_get_perforce_user", sg_user = sg_user)
+        self.__sg_to_p4_user_map[sg_user["id"]] = p4_user
+        return p4_user
 
     def get_shotgun_user(self, p4_user):
         """
         Return the Shotgun user associated with the specified Perforce user
         """
-        return self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
+        if p4_user in self.__p4_to_sg_user_map: 
+            return self.__p4_to_sg_user_map[p4_user]
+        
+        sg_user = self.execute_hook("hook_get_shotgun_user", p4_user = p4_user)
+        self.__p4_to_sg_user_map[p4_user] = sg_user
+        return sg_user
         
     # store/load publish data
     #

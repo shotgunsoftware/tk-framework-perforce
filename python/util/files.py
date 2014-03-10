@@ -18,6 +18,8 @@ import urllib
 import urlparse
 
 from P4 import P4Exception, Map as P4Map # Prefix P4 for consistency
+
+import sgtk
 from sgtk import TankError
 
 from .url import depot_path_from_url
@@ -160,26 +162,33 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
     try:
         file_stat = p4.run_fstat(path)
     except P4Exception, e:
-        raise TankError("Perforce: Failed to run fstat on file - %s" % (p4.errors[0] if p4.errors else e))
+        raise TankError("Failed to run p4 fstat on file - %s" % (p4.errors[0] if p4.errors else e))
     
     if file_stat:
         if not isinstance(file_stat, list) or len(file_stat) != 1 or not isinstance(file_stat[0], dict):
-            raise TankError("Perforce: fstat returned unexpected result!")
+            raise TankError("p4 fstat returned unexpected result for file '%s'!" % path)
         file_stat = file_stat[0]
         
         # file is in Perforce so ensure that it can be checked out:
         # - basically, it's not opened by any other users
-        num_other_opened = int(file_stat.get("otherOpened", "0"))
+        num_other_opened = int(file_stat.get("otherOpens", "0"))
         if num_other_opened > 0:
-            # (TODO) - add user(s) and actions to the error
-            raise TankError("Perforce: File is already opened by another user")
+            # raise error with the first other user that has the file open:
+            open_by = file_stat.get("otherOpen", ["<unknown>"])[0]
+            other_p4_user = open_by.split("@")[0]
+            
+            fw = sgtk.platform.current_bundle()
+            other_sg_user = fw.get_shotgun_user(other_p4_user)
+            if other_sg_user:
+                other_sg_user = other_sg_user.get("name")
+            if not other_sg_user:
+                other_sg_user = other_p4_user
+            raise TankError("File '%s' is already opened for '%s' by '%s'" 
+                            % (path, file_stat.get("otherAction", ["<unknown>"])[0], other_sg_user))
         
         if "action" in file_stat:
-            # user already has file open - check to see if it's locked:
-            if "ourLock" in file_stat:
-                raise TankError("Perforce: File is currently locked!")    
-            
-            # ok, so assume that we can edit the file!
+            # ok, so assume that we can edit the file - we won't
+            # get latest though...
             if test_only:
                 return
         else:
@@ -194,35 +203,35 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
                 try:        
                     p4.run_sync(path)
                 except P4Exception, e:
-                    raise TankError("Perforce: Failed to sync file to latest revision - %s" 
-                                    % (sync_path, p4.errors[0] if p4.errors else e))
+                    raise TankError("Failed to sync file '%s' to latest revision - %s" 
+                                    % (path, p4.errors[0] if p4.errors else e))
 
         # and finally, check out the file to edit:
         try:
             p4.run_edit(path)
         except P4Exception, e:
-            raise TankError("Perforce: Failed to checkout file - %s" 
-                            % (p4.errors[0] if p4.errors else e))
+            raise TankError("Failed to checkout file '%s' - %s" 
+                            % (path, p4.errors[0] if p4.errors else e))
         
     elif add_if_new:
         # file isn't in Perforce yet:
         if not os.path.exists(path):
-            raise TankError("Perforce: Unable to add file to depot as it can't be found!")
+            raise TankError("Unable to add file '%s' to Perforce as it doesn't exist!" % path)
         
         if test_only:
             # ensure file exists under the client root:
             try:
                 p4.run_where(path)
             except P4Exception, e:
-                raise TankError("Perforce: Unable to open file for edit - %s" 
-                                % (p4.errors[0] if p4.errors else e))
+                raise TankError("Unable to add file '%s' to depot - %s"
+                                % (path, p4.errors[0] if p4.errors else e))
         else:
             # add file to depot:
             try:
                 p4.run_add(path)
             except P4Exception, e:
-                raise TankError("Perforce: Failed to add file to depot - %s" 
-                                % (p4.errors[0] if p4.errors else e))                    
+                raise TankError("Failed to add file '%s' to depot - %s" 
+                                % (path, p4.errors[0] if p4.errors else e))                    
         
 def __get_client_root(p4):
     """
