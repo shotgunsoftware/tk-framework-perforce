@@ -143,41 +143,87 @@ def sync_published_file(p4, published_file_entity, latest=True):#, dependencies=
     # (TODO) handle dependencies
     # ...
 
-def check_out_file(p4, path, add_if_not_exists=False):
+def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
     """
-    Check out the specified path for edit.
+    Helper method to open the specified file for editing, optionally adding the file to 
+    the depot as well.
     
-    :param p4:                    An open Perforce connection
-    :param path:                  Path to check out
-    :param add_if_not_exists:     If True then add the file to the depot if possible
+    :param p4:            An open Perforce connection
+    :param path:          The path to check-out/add
+    :param add_if_new:    If True and the file isn't currently in Perforce then it will
+                          be added
+    :param test_only:     Test that the file can be checked-out/added but don't actually
+                          perform the action
     """
-    
-    # first get the current status of the file:
+    # get the current status of the file:
     file_stat = []
     try:
         file_stat = p4.run_fstat(path)
     except P4Exception, e:
-        raise TankError("Perforce: Failed to run fstat on file - %s" % (p4.errors[0] if p4.errors else e))        
+        raise TankError("Perforce: Failed to run fstat on file - %s" % (p4.errors[0] if p4.errors else e))
     
-    if not file_stat:
-        if add_if_not_exists:
-            # file is not in depot so lets try adding it:
-            try:
-                # add the file to the depot:
-                file_stat = p4.run_add(path)
-            except P4Exception, e:
-                raise TankError("Perforce: Failed to add file - %s" % (p4.errors[0] if p4.errors else e))
-    else:
-        if "action" not in file_stat or file_stat["action"] != "edit":
-            # (TODO) - check if file is latest! - what about other actions (delete, etc.)
-            try:
-                p4.run_edit(path)
-            except P4Exception, e:
-                raise TankError("Perforce: Failed to checkout file - %s" % (p4.errors[0] if p4.errors else e))
+    if file_stat:
+        if not isinstance(file_stat, list) or len(file_stat) != 1 or not isinstance(file_stat[0], dict):
+            raise TankError("Perforce: fstat returned unexpected result!")
+        file_stat = file_stat[0]
+        
+        # file is in Perforce so ensure that it can be checked out:
+        # - basically, it's not opened by any other users
+        num_other_opened = int(file_stat.get("otherOpened", "0"))
+        if num_other_opened > 0:
+            # (TODO) - add user(s) and actions to the error
+            raise TankError("Perforce: File is already opened by another user")
+        
+        if "action" in file_stat:
+            # user already has file open - check to see if it's locked:
+            if "ourLock" in file_stat:
+                raise TankError("Perforce: File is currently locked!")    
+            
+            # ok, so assume that we can edit the file!
+            if test_only:
+                return
+        else:
+            if test_only:
+                return
+            
+            # get latest if need to:
+            head_rev = int(file_stat["headRev"])
+            have_rev = int(file_stat.get("haveRev", "0"))
+            
+            if have_rev < head_rev:
+                try:        
+                    p4.run_sync(path)
+                except P4Exception, e:
+                    raise TankError("Perforce: Failed to sync file to latest revision - %s" 
+                                    % (sync_path, p4.errors[0] if p4.errors else e))
 
-    if not file_stat:
-        raise TankError("Perforce: File '%s' does not exist in depot!" % path)
-
+        # and finally, check out the file to edit:
+        try:
+            p4.run_edit(path)
+        except P4Exception, e:
+            raise TankError("Perforce: Failed to checkout file - %s" 
+                            % (p4.errors[0] if p4.errors else e))
+        
+    elif add_if_new:
+        # file isn't in Perforce yet:
+        if not os.path.exists(path):
+            raise TankError("Perforce: Unable to add file to depot as it can't be found!")
+        
+        if test_only:
+            # ensure file exists under the client root:
+            try:
+                p4.run_where(path)
+            except P4Exception, e:
+                raise TankError("Perforce: Unable to open file for edit - %s" 
+                                % (p4.errors[0] if p4.errors else e))
+        else:
+            # add file to depot:
+            try:
+                p4.run_add(path)
+            except P4Exception, e:
+                raise TankError("Perforce: Failed to add file to depot - %s" 
+                                % (p4.errors[0] if p4.errors else e))                    
+        
 def __get_client_root(p4):
     """
     Get the local root directory for the current workspace (as set
