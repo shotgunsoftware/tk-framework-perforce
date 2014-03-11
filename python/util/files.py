@@ -46,14 +46,12 @@ def client_to_depot_paths(p4, client_paths):
     # (TODO) - this might need to be a little more robust!
     valid_client_paths = [path for path in client_paths if path.startswith(client_root)]
 
-    # use: -Rc - Limit output to files mapped into the current workspace.
-    
     client_file_details = get_client_file_details(p4, valid_client_paths)
     depot_paths = []
     for client_path in client_paths:
         depot_path = client_file_details.get(client_path, {}).get("depotFile", "")
         depot_paths.append(depot_path)
-        
+    
     return depot_paths    
 
 def depot_to_client_paths(p4, depot_paths):
@@ -215,9 +213,6 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
         
     elif add_if_new:
         # file isn't in Perforce yet:
-        if not os.path.exists(path):
-            raise TankError("Unable to add file '%s' to Perforce as it doesn't exist!" % path)
-        
         if test_only:
             # ensure file exists under the client root:
             try:
@@ -226,6 +221,9 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
                 raise TankError("Unable to add file '%s' to depot - %s"
                                 % (path, p4.errors[0] if p4.errors else e))
         else:
+            if not os.path.exists(path):
+                raise TankError("Unable to add file '%s' to Perforce as it doesn't exist!" % path)
+            
             # add file to depot:
             try:
                 p4.run_add(path)
@@ -323,14 +321,17 @@ def __run_fstat_and_aggregate(p4, file_paths, fields, flags, type, ignore_delete
     # match up results with files:
     # build a lookup with file_path & headRev
     # headRev is the revision of the result returned, haveRev is the revision
-    # currently synced.  All returned results should have a headRev
+    # currently synced.  All returned results should have a headRev unless the
+    # file has never been added to the depot
     p4_res_lookup = {}
     for item in p4_res:
-        if type not in item or "headRev" not in item:
+        if type not in item:
             continue
         
+        head_revision = int(item.get("headRev", "0"))
         path_key = item[type].replace("\\", "/")
-        p4_res_lookup.setdefault(path_key, dict())[int(item["headRev"])] = item
+        
+        p4_res_lookup.setdefault(path_key, dict())[head_revision] = item
                 
     p4_file_details = {}
     for file_path in file_paths:
