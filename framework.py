@@ -93,14 +93,14 @@ class PerforceFramework(sgtk.platform.Framework):
 
     # store/load review data
     #
-    def store_publish_review_data(self, local_publish_paths, version_data):
+    def store_publish_review_data(self, local_path, review_data):
         """
-        Store review 'version' data for the specified publish paths
+        Store review 'version' data for the specified publish path
         somewhere using a hook
         """
         self.execute_hook("hook_store_review_data", 
-                          local_publish_paths = local_publish_paths,
-                          version_data = version_data)
+                          local_path = local_path,
+                          review_data = review_data)
 
     def load_publish_review_data(self, depot_path, user, workspace, revision):
         """

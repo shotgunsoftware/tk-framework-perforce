@@ -24,17 +24,15 @@ class StoreReviewData(sgtk.Hook):
     
     REVIEW_ATTRIB_NAME = "shotgun_review_metadata"
     
-    def execute(self, local_publish_paths, version_data, **kwargs):
+    def execute(self, local_path, review_data, **kwargs):
         """
         Store the specified publish data so that it can be retrieved lated by
         the corresponding load_publish_data hook
         
-        :local_publish_paths:   
-                        List(String)
-                        Local paths to the (published) files that this review data should
-                        be registered for.
+        :local_path:    String
+                        Local path to the file being published
                         
-        :version_data:  Dictionary
+        :review_data:   Dictionary
                         Dictionary of data to store for the review 'Version'.  This dictionary contains
                         the creation data for a Shotgun 'Version' entity
 
@@ -47,7 +45,7 @@ class StoreReviewData(sgtk.Hook):
         # corresponding 'LoadReviewData' hook later.
         
         # nothing to do if there are no local publish paths or any version data!
-        if not local_publish_paths or not version_data:
+        if not local_path or not review_data:
             return None
 
         p4_fw = self.parent
@@ -58,52 +56,49 @@ class StoreReviewData(sgtk.Hook):
         
         # we're going to store the version data with each published file the version
         # will ultimately be linked to.        
-        sg_review_metadata = copy.deepcopy(version_data)
+        sg_review_metadata = copy.deepcopy(review_data)
 
-        # we'll also need depot paths for all local paths:
-        depot_publish_paths = p4_fw.util.client_to_depot_paths(p4, local_publish_paths)
-        for local, depot in zip(local_publish_paths, depot_publish_paths):
-            if not depot:
-                # (AD) - this doesn't handle new files!
-                raise TankError("Failed to determine Perforce depot path for local file '%s'" % local)
+        # convert all local paths to depot paths:
+        paths_to_convert = [local_path]
+        local_path_to_frames = sg_review_metadata.get("sg_path_to_frames")
+        if local_path_to_frames:
+            paths_to_convert.append(local_path_to_frames)
         
-        # add published file paths in to the data:
-        sg_review_metadata["published_files"] = depot_publish_paths
+        depot_paths = p4_fw.util.client_to_depot_paths(p4, paths_to_convert)
+        
+        depot_publish_path = depot_paths[0]
+        depot_path_to_frames = depot_paths[1] if local_path_to_frames else None 
+
+        # check that publish path translated ok:
+        if not depot_publish_path:
+            raise TankError("Failed to determine Perforce depot path for local file '%s'" % local_path)
             
         # handle sg_path_to_frames if set:
-        path_to_frames = sg_review_metadata.get("sg_path_to_frames")
-        if path_to_frames:
-            # (TODO) convert to depot path:
-            pass
+        if local_path_to_frames:
+            if not depot_path_to_frames:
+                raise TankError("Failed to determine Perforce depot path for local file '%s'" % local_path_to_frames)
+            sg_review_metadata["sg_path_to_frames"] = depot_path_to_frames 
             
-        # upload any files to Shotgun and replace in data with attachment id's:
-        # Q. are there other fields on the "Version" entity that may contain
-        # files that need to be stored?
-        review_file = sg_review_metadata.get("sg_uploaded_movie")
-        if review_file:
+        # if we have an uploaded movie then upload it to shotgun:
+        uploaded_movie_path = sg_review_metadata.get("sg_uploaded_movie")
+        if uploaded_movie_path:
             del(sg_review_metadata["sg_uploaded_movie"])
-            if os.path.exists(review_file):
+            if os.path.exists(uploaded_movie_path):
                 # upload movie:
-                attachment_id = self.__upload_file_to_sg(review_file)
-                sg_review_metadata["sg_uploaded_movie"] = attachment_id
+                attachment_id = self.__upload_file_to_sg(uploaded_movie_path)
+                sg_review_metadata["sg_uploaded_movie"] = (attachment_id, uploaded_movie_path)
 
-        # store the review data as a Perforce attribute on each published file:
+        # store the review data as a Perforce attribute on the published file:
         #
-        
-        # get any existing attribute information: 
-        p4_openattr_name = "openattr-%s" % StoreReviewData.REVIEW_ATTRIB_NAME
-        local_file_attribs = p4_fw.util.get_client_file_details(p4, local_publish_paths, 
-                                                             fields = [p4_openattr_name])
 
         # dump to yaml string:
         sg_metadata_str = yaml.dump(sg_review_metadata)
 
-        # update attribute for each path:
-        for local_path in local_publish_paths:
-            try:                
-                p4.run_attribute("-n", StoreReviewData.REVIEW_ATTRIB_NAME, "-v", sg_metadata_str, local_path)
-            except P4Exception, e:
-                raise TankError("Failed to store review data in Perforce attribute for file '%s'" % local_path)
+        # update attribute for publish path:
+        try:                
+            p4.run_attribute("-n", StoreReviewData.REVIEW_ATTRIB_NAME, "-v", sg_metadata_str, local_path)
+        except P4Exception, e:
+            raise TankError("Failed to store review data in Perforce attribute for file '%s'" % local_path)
         
     def __upload_file_to_sg(self, file_path):
         """

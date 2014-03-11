@@ -21,14 +21,14 @@ import sys
 import tempfile
 import binascii
  
-class LoadPublishData(sgtk.Hook):
+class LoadReviewData(sgtk.Hook):
     
-    PUBLISH_ATTRIB_NAME = "shotgun_metadata"
+    REVIEW_ATTRIB_NAME = "shotgun_review_metadata"
     
     def execute(self, depot_path, user, workspace, revision, **kwargs):
         """
-        Load the specified publish data so that was previously stored by
-        the corresponding save_publish_data hook
+        Load the specified review data that was previously stored by
+        the corresponding save_review_data hook
         
         :depot_path:    String
                         Depot path to the file being published
@@ -43,30 +43,24 @@ class LoadPublishData(sgtk.Hook):
                         Revision of the file
                      
         :returns:       Dictionary
-                        Dictionary of data loaded for the published file.  This data should match 
-                        the parameters expected by the 'sgtk.util.register_publish()' function.
-                        
-        :returns:       Dictionary
                         A dictionary containing the following entries:
                         {
-                            "data":Dictionary         - this is the entity creation data for a Shotgun 
-                                                        PublishedFile entity that was stored by the 
-                                                        corresponding store hook
+                            "data":Dictionary         - this is the entity creation data for a Shotgun Version
+                                                        entity that was stored by the corresponding store hook
                             
                             "temp_files":List         - this is a list of temporary files that can be deleted
                                                         once they are finished with by the calling bundle
-                        }                        
-                        
+                        }
         """
-        # the default implementation looks for the publish data in a p4 attribute 
+        # the default implementation looks for the review data in a p4 attribute 
         # that lives with the file:
         #
-        #    shotgun_metadata - contains a yaml version of all metadata
+        #    shotgun_review_metadata - contains a yaml version of all metadata
         #
-        # If a thumbnail was specified in the publish_data then this will have been
+        # If a movie was specified in the review_data then this will have been
         # stored as a project attachment and will need to be downloaded.
         temp_files = []
-              
+        
         p4_fw = self.parent
         from P4 import P4Exception
 
@@ -74,7 +68,7 @@ class LoadPublishData(sgtk.Hook):
         p4 = p4_fw.connection.connect()
 
         # get the attribute data from Perforce:        
-        p4_attr_name = "attr-%s" % LoadPublishData.PUBLISH_ATTRIB_NAME
+        p4_attr_name = "attr-%s" % LoadReviewData.REVIEW_ATTRIB_NAME
         depot_revision_path = "%s#%d" % (depot_path, revision)
         file_details = p4_fw.util.get_depot_file_details(p4, depot_revision_path, fields = [p4_attr_name])
         
@@ -85,34 +79,35 @@ class LoadPublishData(sgtk.Hook):
             sg_metadata = yaml.load(sg_metadata_str)
         if not sg_metadata:
             return
-
-        # replace context string with full context:
-        ctx_str = sg_metadata.get("context")
-        if ctx_str:
-            ctx = sgtk.context.deserialize(ctx_str)
-            sg_metadata["context"] = ctx
-            
-        # download thumbnail from attachment in Shotgun:
-        thumbnail_path_data = sg_metadata.get("thumbnail_path")
         
-        if thumbnail_path_data and isinstance(thumbnail_path_data, tuple):
-            thumbnail_path, attachment_id = thumbnail_path_data
+        # download thumbnail from attachment in Shotgun:
+        uploaded_movie_data = sg_metadata.get("sg_uploaded_movie")
+        if uploaded_movie_data:
+            attachment_id = 0
+            file_suffix = None
+            if isinstance(uploaded_movie_data, tuple):
+                # data is an (id, path) tuple:
+                attachment_id, path = uploaded_movie_data
+                _, file_suffix = os.path.splitext(path)
+            elif isinstance(uploaded_movie_data, int):
+                attachment_id = uploaded_movie_data
+                
+                # get the path from Shotgun:
+                sg_entity = self.parent.shotgun.find_one("Attachment", [["id", "is", attachment_id]], ["filename"])
+                path = sg_entity.get("filename")
+                _, file_suffix = os.path.splitext(path)
+                
+            if attachment_id:
+                uploaded_movie_path = self.__download_file_from_sg(attachment_id, file_suffix)
+                if uploaded_movie_path:
+                    sg_metadata["sg_uploaded_movie"] = uploaded_movie_path
+                    temp_files.append(uploaded_movie_path)
+                else:
+                    del(sg_metadata["sg_uploaded_movie"])
 
-            # extract suffix from thumbnail_path:
-            thumbnail_suffix = ".png"
-            if thumbnail_path:
-                _, thumbnail_suffix = os.path.splitext(thumbnail_path)
+        return {"data":sg_metadata, "temp_files":temp_files}
 
-            # and download thumbnail:                
-            thumbnail_path = self.__download_file_from_sg(attachment_id, thumbnail_suffix)
-            if thumbnail_path:
-                sg_metadata["thumbnail_path"] = thumbnail_path
-                temp_files.append(thumbnail_path)
-            else:
-                del sg_metadata["thumbnail_path"]                
-
-        return {"data":sg_metadata, "temp_files":temp_files} 
-
+        
     def __download_file_from_sg(self, attachment_id, suffix):
         """
         """
@@ -139,6 +134,13 @@ class LoadPublishData(sgtk.Hook):
             # code deal with no path being returned!
             return
 
-        return temp_path    
-
-
+        return temp_path          
+        
+        
+        
+        
+        
+        
+        
+        
+        
