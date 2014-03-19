@@ -24,7 +24,7 @@ class SceneOperation(Hook):
     current scene
     """
     
-    def execute(self, operation, file_path, context, parent_action, **kwargs):
+    def execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
         """
         Main hook entry point
         
@@ -45,6 +45,11 @@ class SceneOperation(Hook):
                         - new_file
                         - save_file_as 
                         - version_up
+                        
+        :file_version:  The version/revision of the file to be opened.  If this is 'None'
+                        then the latest version should be opened.
+        
+        :read_only:     Specifies if the file should be opened read-only or not
                             
         :returns:       Depends on operation:
                         'current_path' - Return the current scene
@@ -62,15 +67,29 @@ class SceneOperation(Hook):
         elif operation == "open":
             # do new scene as Maya doesn't like opening 
             # the scene it currently has open!   
-            cmds.file(new=True, force=True) 
-            cmds.file(file_path, open=True)
+            cmds.file(new=True, force=True)
             
-            # and check out the file for edit:
-            try:
-                p4 = p4_fw.connection.connect()
-                p4_fw.util.open_file_for_edit(p4, file_path)
-            except TankError, e:
-                self.parent.log_warning(e)
+            # check that we have the correct version synced:
+            p4 = p4_fw.connection.connect()
+            if read_only:
+                pass                
+                ## just sync the file:
+                ## (TODO) - move this to the framework
+                #path_to_sync = file_path
+                #if file_version:
+                #    # sync specific version:
+                #    path_to_sync = "%s#%s" % (path_to_sync, file_version)
+                #try:
+                #    p4.run_sync(path_to_sync)
+                #except P4Exception, e:
+                #    raise TankError("Failed to sync file '%s'" % path_to_sync)
+            else:
+                # open the file for edit:
+                #p4_fw.util.open_file_for_edit(p4, file_path, add_if_new=False, version=file_version)
+                p4_fw.util.open_file_for_edit(p4, file_path, add_if_new=False)
+
+            # open the file
+            cmds.file(file_path, open=True)            
                 
         elif operation == "save":
             # save the current scene:
