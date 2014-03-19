@@ -32,12 +32,10 @@ class GetShotgunUser(sgtk.Hook):
             # can't determine Shotgun user if we don't know p4 user!
             return None
         
-        # default implementation looks for the 'sg_perforce_user' field on the HumanUser entity...
-        sg_res = self.parent.shotgun.find_one("HumanUser", [["sg_perforce_user", "is", p4_user]], ["login"])
-        if not sg_res:
-            # ... but if that fails then we try the login field instead:
-            sg_res =self.parent.shotgun.find_one('HumanUser', [['login', 'is', p4_user]])
-            
+        # default implementation assumes the perforce user name matches the users login:
+        sg_res =self.parent.shotgun.find_one('HumanUser', 
+                                             [['login', 'is', p4_user]],
+                                             ["id", "type", "email", "login", "name", "image"])
         return sg_res        
         
         

@@ -80,6 +80,32 @@ def submit_change(p4, change):
     except P4Exception, e:
         raise TankError("Perforce: %s" % (p4.errors[0] if p4.errors else e))
 
+def get_change_details(p4, changes):
+    """
+    Get the changes details for one or more changes
+    
+    :param p4:         The Perforce connection
+    :param changes:    The list of changes to query Perforce for
+    :returns dict:     A dictionary mapping each change to the details found
+    """
+    try:
+        p4_res = p4.run_describe(changes)
+    except P4Exception, e:
+        raise TankError("Perforce: %s" % (p4.errors[0] if p4.errors else e))
+
+    p4_res_lookup = {}
+    for item in p4_res:
+        change = item.get("change")
+        if not change:
+            continue
+        p4_res_lookup[change] = item 
+
+    change_details = {}
+    for change in changes:
+        details = p4_res_lookup.get(change)
+        change_details[change] = details
+        
+    return change_details
 
 
 

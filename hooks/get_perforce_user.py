@@ -33,17 +33,13 @@ class GetPerforceUser(sgtk.Hook):
             # can't determine Perforce user if we don't know sg user!
             return None
         
-        if not "id" in sg_user:
-            # very bad!
-            raise sgtk.TankError("'id' field missing from Shotgun user dictionary!")
-
-        # default implementation looks for the 'sg_perforce_user' field on the HumanUser entity.  If
-        # that fails then it falls back to the login field        
-        sg_res = self.parent.shotgun.find_one("HumanUser", [["id", "is", sg_user["id"]]], ["sg_perforce_user", "login"])
+        # default implementation just uses the users login:
+        if "login" in sg_user:
+            return sg_user["login"]
+        
+        sg_res = self.parent.shotgun.find_one("HumanUser", [["id", "is", sg_user["id"]]], ["login"])
         if sg_res:
-            return sg_res.get("sg_perforce_user") or sg_res.get("login")
-            
-        return None
+            return sg_res.get("login")
         
         
         

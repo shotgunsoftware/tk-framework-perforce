@@ -28,7 +28,15 @@ class SgtkP4Error(TankError):
     pass
     
 class ConnectionHandler(object):
+    """
+    Encapsulate connecting to Perforce.  This pulls the settings from the various
+    different locations (config, Shotgun, user prefs) as well as being responsible
+    for prompting the user if needed (and UI is available)
+    """
     def __init__(self, fw):
+        """
+        Construction
+        """
         self._fw = fw
         self._p4 = None
 
@@ -135,7 +143,7 @@ class ConnectionHandler(object):
         
         return None
     
-    def connect(self, allow_ui=True, user=None, password=None):
+    def connect(self, allow_ui=True, user=None, password=None, workspace=None):
         """
         Utility method that returns a connection using the current configuration.  If a connection
         can't be established and the user is in ui mode then they will be prompted to edit the
@@ -143,7 +151,7 @@ class ConnectionHandler(object):
         """
         server = self._fw.get_setting("server")
         user = user or self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
-        workspace = self._get_current_workspace()
+        workspace = workspace or self._get_current_workspace()
 
         try:
             # first, attempt to connect to the server:
@@ -446,7 +454,7 @@ class ConnectionHandler(object):
                 return True
         except P4Exception:
             # exception raised because user isn't logged in!
-            # (AD) - are there other exceptions that could be raised?
+            # (TODO) - are there other exceptions that could be raised?
             return True
             
         # p4_res is of the form:
@@ -465,17 +473,37 @@ class ConnectionHandler(object):
         # user isn't logged in!
         return True   
 
-def connect(allow_ui=True, user=None, password=None):
+def connect(allow_ui=True, user=None, password=None, workspace=None):
     """
     Connect to Perforce
+    
+    :param allow_ui:    If True and connecting requires user input (e.g. Password or workspace) then
+                        UI will be shown
+    :param user:        If specified, this will override the current Perforce user
+    :param password:    If specified, this will be used to log in the Perforce user
+    :param workspace:   If specified, this will be used as the workspace for the Perforce user.  If 
+                        set to '' then no workspace will be set for the new connection
+    :returns P4:        A new Perforce connection instance if successful
     """
     fw = sgtk.platform.current_bundle()    
-    return ConnectionHandler(fw).connect(allow_ui, user, password)
+    return ConnectionHandler(fw).connect(allow_ui, user, password, workspace)
     
 def connect_with_dialog():
     """
     Show the Perforce connection dialog
+    
+    :returns P4:    A new Perforce connection instance if successful
     """
     fw = sgtk.platform.current_bundle()    
     return ConnectionHandler(fw).connect_with_dlg()
-    
+
+
+
+
+
+
+
+
+
+
+

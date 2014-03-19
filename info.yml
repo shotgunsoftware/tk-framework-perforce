@@ -16,7 +16,7 @@ configuration:
     server:
         type: str
         description: "Perforce server to connect to.  Should be of the form: 'protocol:server:port'. 
-                     e.g. 'tcp:localhost:1666'"
+                     e.g. 'tcp:perforce:1666'"
         
     server_aliases:
         type: list
