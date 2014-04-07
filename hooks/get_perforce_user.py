@@ -22,11 +22,11 @@ class GetPerforceUser(sgtk.Hook):
         """
         Return the Perforce username associated with the specified shotgun user
         
-        :sg_user:    Dictionary
-                     The shotgun user entity fields
+        :param sg_user:  Dictionary
+                         The shotgun user entity fields
                      
-        :returns:    String
-                     The Perforce username for the specified Shotgun user
+        :returns:        String
+                         The Perforce username for the specified Shotgun user
         """
         
         if not sg_user:

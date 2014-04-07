@@ -25,38 +25,36 @@ class LoadPublishData(sgtk.Hook):
     
     PUBLISH_ATTRIB_NAME = "shotgun_metadata"
     
-    def execute(self, depot_path, user, workspace, revision, **kwargs):
+    def execute(self, depot_path, user, workspace, revision, p4, **kwargs):
         """
         Load the specified publish data so that was previously stored by
         the corresponding save_publish_data hook
         
-        :depot_path:    String
-                        Depot path to the file being published
+        :param depot_path:  String
+                            Depot path to the file being published
                         
-        :user:          Dictionary
-                        Shotgun HumanUser entity dictionary
+        :param user:        Dictionary
+                            Shotgun HumanUser entity dictionary
                         
-        :workspace:     String
-                        The Perforce workspace/client that path is being published in
+        :param workspace:   String
+                            The Perforce workspace/client that path is being published in
                      
-        :revision:      Int
-                        Revision of the file
-                     
-        :returns:       Dictionary
-                        Dictionary of data loaded for the published file.  This data should match 
-                        the parameters expected by the 'sgtk.util.register_publish()' function.
+        :param revision:    Int
+                            Revision of the file
                         
-        :returns:       Dictionary
-                        A dictionary containing the following entries:
-                        {
-                            "data":Dictionary         - this is the entity creation data for a Shotgun 
-                                                        PublishedFile entity that was stored by the 
-                                                        corresponding store hook
+        :param p4:          P4 instance
+                            The Perforce connection to use if needed.
+                        
+        :returns:           Dictionary
+                            A dictionary containing the following entries:
+                            {
+                                "data":Dictionary         - this is the entity creation data for a Shotgun 
+                                                            PublishedFile entity that was stored by the 
+                                                            corresponding store hook
                             
-                            "temp_files":List         - this is a list of temporary files that can be deleted
-                                                        once they are finished with by the calling bundle
-                        }                        
-                        
+                                "temp_files":List         - this is a list of temporary files that can be deleted
+                                                            once they are finished with by the calling bundle
+                            }
         """
         # the default implementation looks for the publish data in a p4 attribute 
         # that lives with the file:
@@ -70,8 +68,8 @@ class LoadPublishData(sgtk.Hook):
         p4_fw = self.parent
         from P4 import P4Exception
 
-        # we'll need a Perforce connection:
-        p4 = p4_fw.connection.connect()
+        # make sure we have a Perforce connection:
+        p4 = p4 if p4 else p4_fw.connection.connect()
 
         # get the attribute data from Perforce:        
         p4_attr_name = "attr-%s" % LoadPublishData.PUBLISH_ATTRIB_NAME

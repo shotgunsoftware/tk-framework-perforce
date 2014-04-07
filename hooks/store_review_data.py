@@ -24,17 +24,20 @@ class StoreReviewData(sgtk.Hook):
     
     REVIEW_ATTRIB_NAME = "shotgun_review_metadata"
     
-    def execute(self, local_path, review_data, **kwargs):
+    def execute(self, local_path, review_data, p4, **kwargs):
         """
         Store the specified publish data so that it can be retrieved lated by
         the corresponding load_publish_data hook
         
-        :local_path:    String
-                        Local path to the file being published
+        :parm local_path:   String
+                            Local path to the file being published
+
+        :param p4:          P4 instance
+                            The Perforce connection to use if needed.
                         
-        :review_data:   Dictionary
-                        Dictionary of data to store for the review 'Version'.  This dictionary contains
-                        the creation data for a Shotgun 'Version' entity
+        :param review_data: Dictionary
+                            Dictionary of data to store for the review 'Version'.  This dictionary contains
+                            the creation data for a Shotgun 'Version' entity
 
         """
         
@@ -51,8 +54,8 @@ class StoreReviewData(sgtk.Hook):
         p4_fw = self.parent
         from P4 import P4Exception
 
-        # we'll need a Perforce connection:
-        p4 = p4_fw.connection.connect()
+        # make sure we have a Perforce connection:
+        p4 = p4 if p4 else p4_fw.connection.connect()
         
         # we're going to store the version data with each published file the version
         # will ultimately be linked to.        

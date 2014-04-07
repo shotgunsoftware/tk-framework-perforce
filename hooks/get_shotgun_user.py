@@ -21,11 +21,11 @@ class GetShotgunUser(sgtk.Hook):
         """
         Return the Shotgun user dictionary for the specified Perforce user
         
-        :p4_user:    String
-                     The Perforce user name
+        :param p4_user:  String
+                         The Perforce user name
                      
-        :returns:    Dictionary
-                     The Shotgun user dictionary for the specified Perforce user
+        :returns:        Dictionary
+                         The Shotgun user dictionary for the specified Perforce user
         """
         
         if not p4_user:

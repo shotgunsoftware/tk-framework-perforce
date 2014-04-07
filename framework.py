@@ -72,15 +72,16 @@ class PerforceFramework(sgtk.platform.Framework):
         
     # store/load publish data
     #
-    def store_publish_data(self, local_path, publish_data):
+    def store_publish_data(self, local_path, publish_data, p4=None):
         """
         Store the publish data for the specified path somewhere using a hook
         """
         self.execute_hook("hook_store_publish_data", 
                           local_path = local_path,
-                          publish_data = publish_data)
+                          publish_data = publish_data,
+                          p4 = p4)
     
-    def load_publish_data(self, depot_path, user, workspace, revision):
+    def load_publish_data(self, depot_path, user, workspace, revision, p4=None):
         """
         Load the publish data for the specified path, user & workspace
         from the location it was stored using a hook
@@ -89,20 +90,22 @@ class PerforceFramework(sgtk.platform.Framework):
                                  depot_path = depot_path,
                                  user = user, 
                                  workspace = workspace,
-                                 revision = revision)
+                                 revision = revision,
+                                 p4 = p4)
 
     # store/load review data
     #
-    def store_publish_review_data(self, local_path, review_data):
+    def store_publish_review_data(self, local_path, review_data, p4=None):
         """
         Store review 'version' data for the specified publish path
         somewhere using a hook
         """
         self.execute_hook("hook_store_review_data", 
                           local_path = local_path,
-                          review_data = review_data)
+                          review_data = review_data,
+                          p4 = p4)
 
-    def load_publish_review_data(self, depot_path, user, workspace, revision):
+    def load_publish_review_data(self, depot_path, user, workspace, revision, p4=None):
         """
         Load the review version data for the specified publish paths, user & workspace
         from the location it was stored using a hook
@@ -111,7 +114,8 @@ class PerforceFramework(sgtk.platform.Framework):
                                  depot_path = depot_path,
                                  user = user, 
                                  workspace = workspace,
-                                 revision = revision)
+                                 revision = revision,
+                                 p4 = p4)
 
     # private methods
     #    
