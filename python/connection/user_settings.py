@@ -61,8 +61,20 @@ class UserSettings(object):
         
         for ai in range(0, array_sz):
             q_settings.setArrayIndex(ai)
-            project_id = int(q_settings.value("project_id"))
-            client = str(q_settings.value("client"))
+            
+            project_id = q_settings.value("project_id")
+            client = q_settings.value("client")
+            
+            # convert from QVariant object if itemData is returned as such
+            if hasattr(QtCore, "QVariant"):
+                if isinstance(project_id, QtCore.QVariant):
+                    project_id = project_id.toPyObject()
+                if isinstance(client, QtCore.QVariant):
+                    client = client.toPyObject()
+
+            project_id = int(project_id)
+            client = str(client)
+
             settings[project_id] = {"client":client}
             
         q_settings.endArray()
