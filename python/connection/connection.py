@@ -150,8 +150,13 @@ class ConnectionHandler(object):
         connection details.
         """
         server = self._fw.get_setting("server")
-        user = user or self._fw.execute_hook("hook_get_perforce_user", sg_user = sgtk.util.get_current_user(self._fw.sgtk))
-        workspace = workspace or self._get_current_workspace()
+        if not user:
+            sg_user = sgtk.util.get_current_user(self._fw.sgtk)
+            user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sg_user)
+            if not user:
+                raise TankError("Perforce: Failed to find Perforce user for Shotgun user '%s'" 
+                                % (sg_user if sg_user else "<unknown>"))        
+        workspace = workspace if workspace != None else self._get_current_workspace()
 
         try:
             # first, attempt to connect to the server:
