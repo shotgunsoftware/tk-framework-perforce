@@ -25,54 +25,54 @@ class PrimaryPublishHook(Hook):
     def execute(self, task, work_template, comment, thumbnail_path, sg_task, progress_cb, **kwargs):
         """
         Main hook entry point
-        :task:          Primary task to be published.  This is a
-                        dictionary containing the following keys:
-                        {   
-                            item:   Dictionary
-                                    This is the item returned by the scan hook 
-                                    {   
-                                        name:           String
-                                        description:    String
-                                        type:           String
-                                        other_params:   Dictionary
-                                    }
-                                   
-                            output: Dictionary
-                                    This is the output as defined in the configuration - the 
-                                    primary output will always be named 'primary' 
-                                    {
-                                        name:             String
-                                        publish_template: template
-                                        tank_type:        String
-                                    }
-                        }
+        :param task:            Primary task to be published.  This is a
+                                dictionary containing the following keys:
+                                {   
+                                    item:   Dictionary
+                                            This is the item returned by the scan hook 
+                                            {   
+                                                name:           String
+                                                description:    String
+                                                type:           String
+                                                other_params:   Dictionary
+                                            }
+                                           
+                                    output: Dictionary
+                                            This is the output as defined in the configuration - the 
+                                            primary output will always be named 'primary' 
+                                            {
+                                                name:             String
+                                                publish_template: template
+                                                tank_type:        String
+                                            }
+                                }
                         
-        :work_template: template
-                        This is the template defined in the config that
-                        represents the current work file
+        :param work_template:   template
+                                This is the template defined in the config that
+                                represents the current work file
                
-        :comment:       String
-                        The comment provided for the publish
+        :param comment:         String
+                                The comment provided for the publish
                         
-        :thumbnail:     Path string
-                        The default thumbnail provided for the publish
+        :param thumbnail:       Path string
+                                The default thumbnail provided for the publish
                         
-        :sg_task:       Dictionary (shotgun entity description)
-                        The shotgun task to use for the publish    
+        :param sg_task:         Dictionary (shotgun entity description)
+                                The shotgun task to use for the publish    
                         
-        :progress_cb:   Function
-                        A progress callback to log progress during pre-publish.  Call:
-                        
-                            progress_cb(percentage, msg)
-                             
-                        to report progress to the UI
+        :param progress_cb:     Function
+                                A progress callback to log progress during pre-publish.  Call:
+                                
+                                    progress_cb(percentage, msg)
+                                     
+                                to report progress to the UI
         
-        :returns:       Path String
-                        Hook should return the path of the primary publish so that it
-                        can be passed as a dependency to all secondary publishes
-        
-                        Hook should raise a TankError if publish of the 
-                        primary task fails
+        :returns:               Path String
+                                Hook should return the path of the primary publish so that it
+                                can be passed as a dependency to all secondary publishes
+                
+        :raises:                Hook should raise a TankError if publish of the 
+                                primary task fails
         """
         # get the engine name from the parent object (app/engine/etc.)
         engine_name = self.parent.engine.name

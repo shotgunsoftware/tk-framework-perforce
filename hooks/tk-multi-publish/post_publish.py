@@ -23,24 +23,25 @@ class PostPublishHook(Hook):
         """
         Main hook entry point
         
-        :work_template: template
-                        This is the template defined in the config that
-                        represents the current work file
+        :param work_template:   template
+                                This is the template defined in the config that
+                                represents the current work file
 
-        :primary_task:  The primary task that was published by the primary publish hook.  Passed
-                        in here for reference.
+        :param primary_task:    The primary task that was published by the primary publish hook.  Passed
+                                in here for reference.
 
-        :secondary_tasks:  The list of secondary taskd that were published by the secondary 
-                        publish hook.  Passed in here for reference.
+        :param secondary_tasks: The list of secondary taskd that were published by the secondary 
+                                publish hook.  Passed in here for reference.
                         
-        :progress_cb:   Function
-                        A progress callback to log progress during pre-publish.  Call:
+        :param progress_cb:     Function
+                                A progress callback to log progress during pre-publish.  Call:
                         
-                            progress_cb(percentage, msg)
+                                    progress_cb(percentage, msg)
                              
-                        to report progress to the UI
+                                to report progress to the UI
 
-        :returns:       None - raise a TankError to notify the user of a problem
+        :returns:               None
+        :raises:                Raise a TankError to notify the user of a problem
         """
         # Note, if the commit to Perforce should always be done at the end of the publish
         # then it could make sense to move it here rather than having it as a secondary
