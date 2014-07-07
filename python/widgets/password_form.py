@@ -46,7 +46,7 @@ class PasswordForm(QtGui.QWidget):
         self.__ui.details_btn.setVisible(show_details_btn)
         
         self.__ui.invalid_label.setVisible(error_msg is not None)
-        self.__ui.invalid_label.setText(error_msg)
+        self.__ui.invalid_label.setText(error_msg or "")
         
         self.__ui.cancel_btn.clicked.connect(self._on_cancel)
         self.__ui.ok_btn.clicked.connect(self._on_ok)

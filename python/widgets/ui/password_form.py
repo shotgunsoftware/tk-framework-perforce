@@ -11,7 +11,7 @@ from tank.platform.qt import QtCore, QtGui
 class Ui_PasswordForm(object):
     def setupUi(self, PasswordForm):
         PasswordForm.setObjectName("PasswordForm")
-        PasswordForm.resize(381, 162)
+        PasswordForm.resize(345, 162)
         self.verticalLayout = QtGui.QVBoxLayout(PasswordForm)
         self.verticalLayout.setSpacing(4)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -37,7 +37,7 @@ class Ui_PasswordForm(object):
         self.invalid_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.invalid_label.setObjectName("invalid_label")
         self.verticalLayout_2.addWidget(self.invalid_label)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        spacerItem = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem)
         self.verticalLayout_2.setStretch(3, 1)
         self.verticalLayout.addLayout(self.verticalLayout_2)
@@ -52,7 +52,7 @@ class Ui_PasswordForm(object):
         self.details_btn = QtGui.QPushButton(PasswordForm)
         self.details_btn.setObjectName("details_btn")
         self.horizontalLayout_3.addWidget(self.details_btn)
-        spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        spacerItem1 = QtGui.QSpacerItem(0, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem1)
         self.cancel_btn = QtGui.QPushButton(PasswordForm)
         self.cancel_btn.setMinimumSize(QtCore.QSize(90, 0))
