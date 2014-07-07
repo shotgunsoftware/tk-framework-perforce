@@ -10,9 +10,9 @@
 
 import os
 
-import tank
-from tank import Hook
-from tank import TankError
+import sgtk
+from sgtk import Hook
+from sgtk import TankError
 
 TK_FRAMEWORK_PERFORCE_NAME = "tk-framework-perforce_v0.x.x"
 
@@ -67,15 +67,58 @@ class PrimaryPrePublishHook(Hook):
         engine_name = self.parent.engine.name
         
         # depending on engine:
-        if engine_name == "tk-maya":
+        if engine_name == "tk-3dsmax":
+            return self._do_3dsmax_pre_publish(task, work_template, progress_cb)
+        elif engine_name == "tk-maya":
             return self._do_maya_pre_publish(task, work_template, progress_cb)
         elif engine_name == "tk-photoshop":
             return self._do_photoshop_pre_publish(task, work_template, progress_cb)        
         else:
             raise TankError("Unable to perform pre-publish for unhandled engine %s" % engine_name)            
             
+    def _do_3dsmax_pre_publish(self, task, work_template, progress_cb):
+        """
+        Do 3ds Max primary pre-publish/scene validation
+        
+        :param task:            The primary task to pre-publish
+        :param work_template:   The template that matches the current work file
+        :param progress_cb:     The progress callback to report all progress through
+        
+        :returns:               A list of strings representing any non-critical problems that 
+                                were found during pre-processing.
+        """
+        from Py3dsMax import mxs
+        
+        progress_cb(0.0, "Validating current scene", task)
+        
+        # get the current scene file:
+        scene_file = os.path.abspath(os.path.join(mxs.maxFilePath, mxs.maxFileName))
+            
+        progress_cb(25)
+            
+        # validate the work path:
+        if not work_template.validate(scene_file):
+            raise TankError("File '%s' is not a valid work path, unable to publish!" % scene_file)
+        
+        # Do any additional validation of the scene/primary task:
+        p4_fw = self.load_framework(TK_FRAMEWORK_PERFORCE_NAME)
+        p4 = p4_fw.connection.connect()
+        p4_fw.util.open_file_for_edit(p4, scene_file, test_only=True)            
+        
+        progress_cb(100)
+          
+        return [] # no errors
+            
     def _do_maya_pre_publish(self, task, work_template, progress_cb):
         """
+        Do Maya primary pre-publish/scene validation
+        
+        :param task:            The primary task to pre-publish
+        :param work_template:   The template that matches the current work file
+        :param progress_cb:     The progress callback to report all progress through
+        
+        :returns:               A list of strings representing any non-critical problems that 
+                                were found during pre-processing.        
         """
         import maya.cmds as cmds
         
@@ -104,6 +147,13 @@ class PrimaryPrePublishHook(Hook):
     def _do_photoshop_pre_publish(self, task, work_template, progress_cb):
         """
         Do Photoshop primary pre-publish/scene validation
+        
+        :param task:            The primary task to pre-publish
+        :param work_template:   The template that matches the current work file
+        :param progress_cb:     The progress callback to report all progress through
+        
+        :returns:               A list of strings representing any non-critical problems that 
+                                were found during pre-processing.        
         """
         import photoshop
         

@@ -82,12 +82,12 @@ class PrimaryPublishHook(Hook):
         
         # create a publisher instance depending on the engine:
         publisher = None
+        if engine_name == "tk-3dsmax":
+            publisher = MaxPublisher(self.parent, p4_fw)
         if engine_name == "tk-maya":
             publisher = MayaPublisher(self.parent, p4_fw)
-            #return self._do_maya_publish(task, work_template, comment, thumbnail_path, sg_task, progress_cb)
         elif engine_name == "tk-photoshop":
             publisher = PhotoshopPublisher(self.parent, p4_fw)
-            #return self._do_photoshop_publish(task, work_template, comment, thumbnail_path, sg_task, progress_cb)
             
         if publisher:
             return publisher.do_publish(task, work_template, comment, thumbnail_path, sg_task, progress_cb)
@@ -182,7 +182,28 @@ class PublisherBase(object):
         Find dependencies for the current scene
         """
         return []
-    
+
+class MaxPublisher(PublisherBase):
+    """
+    3ds Max specific instance of the Publisher class
+    """
+
+    def _get_scene_path(self):
+        """
+        Return the current scene path for 3ds Max 
+        """
+        from Py3dsMax import mxs
+        return os.path.abspath(os.path.join(mxs.maxFilePath, mxs.maxFileName))
+
+    def _save(self):
+        """
+        Save the current scene
+        """
+        from Py3dsMax import mxs
+        scene_path = os.path.abspath(os.path.join(mxs.maxFilePath, mxs.maxFileName))
+        mxs.saveMaxFile(scene_path)
+
+
 class MayaPublisher(PublisherBase):
     """
     Maya specific instance of the Publisher class
