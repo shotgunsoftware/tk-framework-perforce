@@ -206,10 +206,9 @@ class PerforceFramework(sgtk.platform.Framework):
             preferred_compiler_str = "_vc%d" % vc_version
             compiler_strings = [preferred_compiler_str]
             # add in all other versions we support:
-            for vc_version in [9, 10]:
-                compiler_str = "_vc%d" % vc_version
-                if compiler_str not in compiler_strings:
-                    compiler_strings.append(compiler_str)
+            for v in [9, 10]:
+                if v != vc_version:
+                    compiler_strings.append("_vc%d" % v)
 
         # attempt to import P4:
         loaded_p4 = False
