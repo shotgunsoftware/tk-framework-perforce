@@ -170,10 +170,19 @@ class PerforceFramework(sgtk.platform.Framework):
         # platform/os string
         os_str = {"darwin":"mac", "win32":"win64" if sys.maxsize > 2**32 else "win32", "linux2":"linux"}[sys.platform]
         
-        # compiler string - currently windows specific:
-        compiler_str = ""
+        # compiler string - currently windows specific
+        compiler_strings = [""]
+        preferred_compiler_str = ""
         if sys.platform == "win32":
-            # for windows, we may need to determine p4python based on compiler:
+            # For windows, we may need to determine p4python based on compiler.  Note that the compiler information
+            # obtained from the platform module will only be correct when using python.exe or an embedded python dll
+            # that was built with the same compiler as the containing executable.
+            #
+            # Because of this, we find the preferred compiler based on the version used to build Python but then
+            # we also have to fall back to try and load versions built with other compilers if this fails.
+            #
+            # The main example of this atm is 3ds Max 2014 with Blur Python running Python 2.7...  3ds Max & Blur
+            # are both compiled with VS 2010 but the stock release of Python 2.7 is built with VS 2008.
             compiler = platform.python_compiler()
             
             # default vc version for python 2.6 & 2.7 is 9 (VS2008):
@@ -194,25 +203,44 @@ class PerforceFramework(sgtk.platform.Framework):
                 except ValueError:
                     pass
 
-            compiler_str = "_vc%d" % vc_version
+            preferred_compiler_str = "_vc%d" % vc_version
+            compiler_strings = [preferred_compiler_str]
+            # add in all other versions we support:
+            for v in [9, 10]:
+                if v != vc_version:
+                    compiler_strings.append("_vc%d" % v)
 
-        # build the python directory:
-        p4python_dir = "p4python_py%s_p4d%s%s_%s" % (py_version_str, p4d_version_str, compiler_str, os_str)
-        p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
-        if not os.path.exists(p4_path):
-            self.log_error("Unable to locate a compatible version of P4Python for Python v%d.%d, P4D v%s%s. "
-                           "Please contact toolkitsupport@shotgunsoftware.com for assistance!" 
-                           % (sys.version_info[0], sys.version_info[1], p4d_version_str, compiler_str))
-        else:
-            sys.path.append(p4_path)
-                
-            # finally, check that it's working!
+        # attempt to import P4:
+        loaded_p4 = False
+        preferred_p4_path = ""
+        for compiler_str in compiler_strings:
+            p4python_dir = "p4python_py%s_p4d%s%s_%s" % (py_version_str, p4d_version_str, compiler_str, os_str)
+            p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
+            if compiler_str == preferred_compiler_str:
+                preferred_p4_path = p4_path
+
+            # append it to the path:
+            if p4_path not in sys.path: 
+                sys.path.append(p4_path)
             try:
+                # attempt to import P4
                 from P4 import P4
             except:
-                self.log_error("Failed to load P4Python!")
+                # failed to load so lets remove it from the path!
+                if sys.path[-1] == p4_path:
+                    del sys.path[-1]
             else:
-                self.log_debug("P4Python successfully loaded!")
-            
+                loaded_p4 = True
+                break
+
+        if not loaded_p4:
+            if not os.path.exists(preferred_p4_path):
+                self.log_error("Unable to locate a compatible version of P4Python for Python v%d.%d, P4D v%s%s. "
+                               "Please contact toolkitsupport@shotgunsoftware.com for assistance!" 
+                               % (sys.version_info[0], sys.version_info[1], p4d_version_str, preferred_compiler_str))
+            else:            
+                self.log_error("Failed to load P4Python!")
+        else:
+            self.log_debug("P4Python successfully loaded!")
             
   
