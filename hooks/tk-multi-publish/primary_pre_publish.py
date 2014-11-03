@@ -69,6 +69,8 @@ class PrimaryPrePublishHook(Hook):
         # depending on engine:
         if engine_name == "tk-3dsmax":
             return self._do_3dsmax_pre_publish(task, work_template, progress_cb)
+        if engine_name == "tk-3dsmaxplus":
+            return self._do_3dsmaxplus_pre_publish(task, work_template, progress_cb)
         elif engine_name == "tk-maya":
             return self._do_maya_pre_publish(task, work_template, progress_cb)
         elif engine_name == "tk-photoshop":
@@ -109,6 +111,38 @@ class PrimaryPrePublishHook(Hook):
           
         return [] # no errors
             
+    def _do_3dsmaxplus_pre_publish(self, task, work_template, progress_cb):
+        """
+        Do 3ds Max with MaxPlus primary pre-publish/scene validation
+        
+        :param task:            The primary task to pre-publish
+        :param work_template:   The template that matches the current work file
+        :param progress_cb:     The progress callback to report all progress through
+        
+        :returns:               A list of strings representing any non-critical problems that 
+                                were found during pre-processing.
+        """
+        import MaxPlus
+        
+        progress_cb(0.0, "Validating current scene", task)
+        
+        # get the current scene file:
+        scene_path = MaxPlus.FileManager.GetFileNameAndPath()
+            
+        progress_cb(25)
+            
+        # validate the work path:
+        if not work_template.validate(scene_file):
+            raise TankError("File '%s' is not a valid work path, unable to publish!" % scene_file)
+        
+        # Do any additional validation of the scene/primary task:
+        p4_fw = self.load_framework(TK_FRAMEWORK_PERFORCE_NAME)
+        p4 = p4_fw.connection.connect()
+        p4_fw.util.open_file_for_edit(p4, scene_file, test_only=True)            
+        
+        progress_cb(100)
+          
+        return [] # no errors
     def _do_maya_pre_publish(self, task, work_template, progress_cb):
         """
         Do Maya primary pre-publish/scene validation
