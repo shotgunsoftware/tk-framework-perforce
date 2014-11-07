@@ -223,7 +223,7 @@ class MaxPlusPublisher(PublisherBase):
         """
         import MaxPlus
         scene_path = MaxPlus.FileManager.GetFileNameAndPath()
-        MaxPlus.FileManager.Save(file_path)
+        MaxPlus.FileManager.Save(scene_path)
 
 class MayaPublisher(PublisherBase):
     """

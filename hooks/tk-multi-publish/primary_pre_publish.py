@@ -127,7 +127,7 @@ class PrimaryPrePublishHook(Hook):
         progress_cb(0.0, "Validating current scene", task)
         
         # get the current scene file:
-        scene_path = MaxPlus.FileManager.GetFileNameAndPath()
+        scene_file = MaxPlus.FileManager.GetFileNameAndPath()
             
         progress_cb(25)
             
