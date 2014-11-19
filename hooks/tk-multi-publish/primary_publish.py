@@ -84,6 +84,8 @@ class PrimaryPublishHook(Hook):
         publisher = None
         if engine_name == "tk-3dsmax":
             publisher = MaxPublisher(self.parent, p4_fw)
+        if engine_name == "tk-3dsmaxplus":
+            publisher = MaxPlusPublisher(self.parent, p4_fw)
         if engine_name == "tk-maya":
             publisher = MayaPublisher(self.parent, p4_fw)
         elif engine_name == "tk-photoshop":
@@ -203,6 +205,25 @@ class MaxPublisher(PublisherBase):
         scene_path = os.path.abspath(os.path.join(mxs.maxFilePath, mxs.maxFileName))
         mxs.saveMaxFile(scene_path)
 
+class MaxPlusPublisher(PublisherBase):
+    """
+    3ds Max with MaxPlus specific instance of the Publisher class
+    """
+
+    def _get_scene_path(self):
+        """
+        Return the current scene path for 3ds Max 
+        """
+        import MaxPlus
+        return MaxPlus.FileManager.GetFileNameAndPath()
+
+    def _save(self):
+        """
+        Save the current scene
+        """
+        import MaxPlus
+        scene_path = MaxPlus.FileManager.GetFileNameAndPath()
+        MaxPlus.FileManager.Save(scene_path)
 
 class MayaPublisher(PublisherBase):
     """
