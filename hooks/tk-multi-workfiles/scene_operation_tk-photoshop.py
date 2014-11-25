@@ -101,15 +101,12 @@ class SceneOperation(Hook):
         
         elif operation == "save_as":
             doc = self._get_active_document()
-            new_file = photoshop.RemoteObject('flash.filesystem::File', file_path)
             
             # and check out the file for edit:
             p4 = p4_fw.connection.connect()
             p4_fw.util.open_file_for_edit(p4, file_path, add_if_new=False)
-            
-            # no options and do not save as a copy
-            # http://cssdk.host.adobe.com/sdk/1.5/docs/WebHelp/references/csawlib/com/adobe/photoshop/Document.html#saveAs()
-            doc.saveAs(new_file, None, False)
+
+            photoshop.save_as(doc, file_path)
 
         elif operation == "reset":
             # do nothing and indicate scene was reset to empty
