@@ -54,7 +54,11 @@ class FilterPublishes(Hook):
             if not sg_publish:
                 continue
             
-            depot_path_url = sg_publish.get("path", {}).get("url")
+            sg_publish_path = sg_publish.get("path")
+            if not sg_publish_path:
+                continue
+            
+            depot_path_url = sg_publish_path.get("url")
             if not depot_path_url:
                 continue
             
