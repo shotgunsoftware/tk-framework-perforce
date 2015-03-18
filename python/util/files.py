@@ -148,12 +148,19 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
     Helper method to open the specified file for editing, optionally adding the file to 
     the depot as well.
     
-    :param p4:            An open Perforce connection
-    :param path:          The path to check-out/add
-    :param add_if_new:    If True and the file isn't currently in Perforce then it will
-                          be added
-    :param test_only:     Test that the file can be checked-out/added but don't actually
-                          perform the action
+    This tries to accomodate various different states the file can be in in Perforce (open,
+    open by another, out-of-date, previously deleted, etc.) and will try to make sure the
+    file is synced to the head revision before editing/adding to avoid unexpected conflicts
+    which would then need resolving.
+    
+    :param p4:          An open Perforce connection
+    :param path:        The path to check-out/add
+    :param add_if_new:  If True and the file isn't currently in Perforce then it will
+                        be added
+    :param test_only:   Test that the file can be checked-out/added but don't actually
+                        perform the action
+    :raises:            Raises a TankError if for any reason the file can't be opened/added
+                        for edit or if any of the perforce commands fail.
     """
     # get the current status of the file:
     file_stat = []
@@ -162,13 +169,16 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
     except P4Exception, e:
         raise TankError("Failed to run p4 fstat on file - %s" % (p4.errors[0] if p4.errors else e))
     
+    # to edit the file in p4 we may need to do either an add or an edit depending on the
+    # status of the file!
+    (P4_EDIT, P4_ADD) = range(2)
+    p4_operation = P4_EDIT
     if file_stat:
         if not isinstance(file_stat, list) or len(file_stat) != 1 or not isinstance(file_stat[0], dict):
             raise TankError("p4 fstat returned unexpected result for file '%s'!" % path)
         file_stat = file_stat[0]
         
-        # file is in Perforce so ensure that it can be checked out:
-        # - basically, it's not opened by any other users
+        # Check to see if the file is already opened by any other users:
         num_other_opened = int(file_stat.get("otherOpens", "0"))
         if num_other_opened > 0:
             # raise error with the first other user that has the file open:
@@ -185,33 +195,48 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
                             % (path, file_stat.get("otherAction", ["<unknown>"])[0], other_sg_user))
         
         if "action" in file_stat:
-            # ok, so assume that we can edit the file - we won't
-            # get latest though...
+            # we are already doing something to the file so assume that we can
+            # edit the file - we won't get latest though!
             if test_only:
                 return
         else:
+            # we aren't currently doing anything with the file so we should
+            # be ok to start editing it!
             if test_only:
                 return
             
-            # get latest if need to:
+            # if we aren't on the latest revision then we should sync to avoid unneccessary
+            # conflicts!
             head_rev = int(file_stat["headRev"])
             have_rev = int(file_stat.get("haveRev", "0"))
+            head_action = file_stat.get("headAction")            
+            head_rev_deleted = head_action and head_action in ["delete", "move/delete"] 
             
             if have_rev < head_rev:
+                sync_args = [path]
+                
+                # if the file was previously deleted then we want to sync but we don't want to
+                # cause the new file to be removed as part of the sync!
+                if head_rev_deleted:
+                    # sync to latest version but _don't_ remove the file:
+                    sync_args.insert(0, "-k")
+                    
+                # run the sync:
                 try:        
-                    p4.run_sync(path)
+                    p4.run_sync(sync_args)
                 except P4Exception, e:
                     raise TankError("Failed to sync file '%s' to latest revision - %s" 
                                     % (path, p4.errors[0] if p4.errors else e))
 
-        # and finally, check out the file to edit:
-        try:
-            p4.run_edit(path)
-        except P4Exception, e:
-            raise TankError("Failed to checkout file '%s' - %s" 
-                            % (path, p4.errors[0] if p4.errors else e))
-        
-    elif add_if_new:
+            # finally, check the headAction to see if the file was previously deleted.
+            # if it was then instead of editing we will need to add it again
+            if head_rev_deleted:
+                p4_operation = P4_ADD
+    else:
+        # File has never existed in Perforce so we'll have to add it:
+        p4_operation = P4_ADD
+
+    if p4_operation == P4_ADD and add_if_new:
         # file isn't in Perforce yet:
         if test_only:
             # ensure file exists under the client root:
@@ -229,7 +254,15 @@ def open_file_for_edit(p4, path, add_if_new=True, test_only=False):
                 p4.run_add(path)
             except P4Exception, e:
                 raise TankError("Failed to add file '%s' to depot - %s" 
-                                % (path, p4.errors[0] if p4.errors else e))                    
+                                % (path, p4.errors[0] if p4.errors else e))
+                
+    elif p4_operation == P4_EDIT:
+        # File is already in Perforce so check it out to edit:
+        try:
+            p4.run_edit(path)
+        except P4Exception, e:
+            raise TankError("Failed to checkout file '%s' - %s" 
+                            % (path, p4.errors[0] if p4.errors else e))
         
 def __get_client_root(p4):
     """
