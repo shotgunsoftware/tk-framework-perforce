@@ -75,6 +75,8 @@ class PrimaryPrePublishHook(Hook):
             return self._do_maya_pre_publish(task, work_template, progress_cb)
         elif engine_name == "tk-photoshop":
             return self._do_photoshop_pre_publish(task, work_template, progress_cb)        
+        elif engine_name == "tk-motionbuilder":
+            return self._do_motionbuilder_pre_publish(task, work_template, progress_cb)        
         else:
             raise TankError("Unable to perform pre-publish for unhandled engine %s" % engine_name)            
             
@@ -177,6 +179,12 @@ class PrimaryPrePublishHook(Hook):
         progress_cb(100)
           
         return [] # no errors
+        
+    def _do_motionbuilder_pre_publish(self, task, work_template, progress_cb):
+        
+        # TODO: Add hook code here!
+        # see https://github.com/shotgunsoftware/tk-multi-publish/blob/master/hooks/primary_pre_publish.py#L117
+        pass    
         
     def _do_photoshop_pre_publish(self, task, work_template, progress_cb):
         """

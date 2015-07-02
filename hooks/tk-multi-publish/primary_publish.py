@@ -88,6 +88,8 @@ class PrimaryPublishHook(Hook):
             publisher = MaxPlusPublisher(self.parent, p4_fw)
         if engine_name == "tk-maya":
             publisher = MayaPublisher(self.parent, p4_fw)
+        if engine_name == "tk-motionbuilder":
+            publisher = MotionbuilderPublisher(self.parent, p4_fw)
         elif engine_name == "tk-photoshop":
             publisher = PhotoshopPublisher(self.parent, p4_fw)
             
@@ -292,6 +294,17 @@ class MayaPublisher(PublisherBase):
 
         return dependency_paths
     
+
+class MotionbuilderPublisher(PublisherBase):
+    """
+    Maya specific instance of the Publisher class
+    """
+
+    # TODO - need to implement this
+    # probably easiest to look at the maya class above
+    # and also at the default hook here:
+    # https://github.com/shotgunsoftware/tk-multi-publish/blob/master/hooks/primary_publish.py#L219
+
 class PhotoshopPublisher(PublisherBase):
     """
     Photoshop specific instance of the Publisher class
