@@ -95,6 +95,145 @@ class ConnectionHandler(object):
         self._p4 = p4
         return self._p4
 
+    def _ensure_connection_is_trusted(self, allow_ui=True, parent_widget=None):
+        """
+        Ensure that the current connection is trusted and if not then either prompt the user if possible.  For all
+        non-ssl connections, this always returns True
+
+        :param allow_ui:        True if we are allowed to prompt the user via a UI.
+        :param parent_widget:   The widget any UI should be parented to
+        :returns:               True if the connection is trusted, otherwise False.
+        :raises:                A TankError or SgtkP4Error if something goes wrong.
+        """
+        if not self._p4.port.startswith("ssl:"):
+            # non-ssl servers are always trusted
+            return (True, False)
+
+        fingerprint = None
+        fingerprint_changed = False
+        try:
+            # run trust command to query the current trust.  This returns either something like the 
+            # following if trust is not already established:
+            #
+            # ["The fingerprint of the server of your P4PORT setting\n'ssl:192.168.0.21:1668' 
+            #   (192.168.0.21:1668) is not known.\nThat fingerprint is 
+            #   F2:77:7B:7C:A4:B4:F2:7A:ED:C4:73:04:4D:B4:68:BD:D1:52:8F:44"]
+            #
+            # If trust is established then it returns:
+            #
+            # ["Trust already established.\n"]
+            #
+            # Wouldn't it be nice if there was a simple query command instead of having to parse the
+            # returned message!
+            p4_res = self._p4.run_trust()
+        except P4Exception, e:
+            # if for some reason the client has an ssl fingerprint but it doesn't match the servers then we get
+            # an exception, something like this:
+            #
+            # ["******* WARNING P4PORT IDENTIFICATION HAS CHANGED! *******\nIt is possible that someone 
+            #   is intercepting your connection\nto the Perforce P4PORT '192.168.0.21:1668'\nIf this is 
+            #   not a scheduled key change, then you should contact\nyour Perforce administrator.\nThe 
+            #   fingerprint for the mismatched key sent to your client is\n
+            #   F2:77:7B:7C:A4:B4:F2:7A:ED:C4:73:04:4D:B4:68:BD:D1:52:8F:44"]
+            #
+            # We should probably tell the user about this!
+            error_msg = self._p4.errors[0] if self._p4.errors else ""
+            if error_msg.startswith("******* WARNING P4PORT IDENTIFICATION HAS CHANGED! *******"):
+                reg_exp = re.compile(".*The fingerprint for the mismatched key sent to your client is\\n"
+                                     "(?P<fingerprint>([A-F0-9]{2}:)+[A-F0-9]{2})", re.DOTALL)
+                re_res = reg_exp.match(error_msg)
+                if re_res:
+                    fingerprint = re_res.group("fingerprint") 
+
+            if not fingerprint or not (allow_ui and self._fw.engine.has_ui):
+                # this is serious and we can't ask the user for verification so lets raise
+                raise SgtkP4Error(self._p4.errors[0] if self._p4.errors else str(e))
+
+            fingerprint_changed = True
+        else:
+            if not p4_res:
+                raise TankError("p4 trust returned an unexpected result: %s" % p4_res)
+            msg = p4_res[0]
+            if msg.startswith("Trust already established."):
+                # awesome!
+                return (True, False)
+
+            # trust isn't established and we can only attempt to establish trust if we have ui:
+            if not (allow_ui and self._fw.engine.has_ui):
+                raise TankError(msg)
+
+            # connection isn't trusted yet - extract the fingerprint from the command result:
+            reg_exp = re.compile(".*That fingerprint is (?P<fingerprint>([A-F0-9]{2}:)+[A-F0-9]{2})", re.DOTALL)
+            re_res = reg_exp.match(msg)
+            if not re_res:
+                # unexpected message - lets hope this never happens!
+                raise TankError("Failed to determine ssl fingerprint from '%s'!" % msg)
+            fingerprint = re_res.group("fingerprint")
+
+        if not fingerprint:
+            raise TankError("Failed to determine ssl fingerprint to use!")
+
+        # we have a fingerprint, lets ask the user if it should be trusted:
+        establish_trust, show_details = self._fw.engine.execute_in_main_thread(self._prompt_for_trust, 
+                                                                               fingerprint, 
+                                                                               fingerprint_changed,
+                                                                               parent_widget)
+        if not establish_trust:
+            return (False, show_details)
+
+        # ok, so lets attempt to establish some trust (if only all trust in life was this simple...):
+        try:
+            try:
+                # install the fingerprint that the server sent over:
+                self._p4.run_trust("-i", fingerprint)
+            except P4Exception:
+                # note that changing the fingerprint will always raise a P4Exception if there was previously
+                # a fingerprint that has now changed!
+                if not fingerprint_changed:
+                    # something else must have gone wrong!
+                    raise
+
+            # check that trust has been established:
+            p4_res = self._p4.run_trust()
+            if not p4_res:
+                raise TankError("p4 trust returned an unexpected result: %s" % p4_res)
+            if not p4_res[0].startswith("Trust already established."):
+                # boo!
+                raise TankError("Failed to establish trust with server!")
+
+        except P4Exception, e:
+            raise SgtkP4Error(self._p4.errors[0] if self._p4.errors else str(e))
+
+        # all good!
+        return (True, False)
+
+    def _prompt_for_trust(self, fingerprint, fingerprint_changed, parent_widget):
+        """
+        Prompt the user to see if they trust this connection.  Runs in the main thread.
+
+        :param fingerprint:          The fingerprint returned for the server
+        :param fingerprint_changed:  True if the fingerprint is different to a previously trusted
+                                     fingerprint - may indicate communication has been intercepted
+        :param parent_widget:        The widget the dialog should be parented to
+        :returns:                    (Bool, Bool) tuple containing (is_trusted, show_details) indicating if
+                                     the user trusts the connection/fingerprint and if the details dialog
+                                     should be shown.
+        """
+        # show the trust dialog:
+        from ..widgets import TrustForm
+        res, widget = self._fw.engine.show_modal("Perforce Fingerprint Required", self._fw, TrustForm,
+                                                 self._p4.port, fingerprint, fingerprint_changed, 
+                                                 (parent_widget == None), parent_widget)
+        if res == TrustForm.SHOW_DETAILS:
+            # just return the result:
+            return (False, True)
+        elif res != QtGui.QDialog.Accepted:
+            # user hit cancel
+            return (False, False)
+        else:
+            # user hit ok
+            return (True, False)
+
     def _login_user(self, user, parent_widget=None):
         """
         Log-in the specified Perforce user if required.
@@ -164,7 +303,19 @@ class ConnectionHandler(object):
                 self.connect_to_server()
             except SgtkP4Error, e:
                 raise TankError("Perforce: Failed to connect to perforce server '%s' - %s" % (server, e))
-    
+
+            # then ensure that the connection is trusted:
+            try:
+                is_trusted, show_details = self._ensure_connection_is_trusted(allow_ui)
+                if show_details:
+                    # switch to connection dialog
+                    raise TankError()
+                elif not is_trusted:
+                    # user decided not to trust!:
+                    return
+            except SgtkP4Error, e:
+                raise TankError("Perforce: Connection to server '%s' is not trusted: %s" % (server, e))
+
             # log-in user:
             try:
                 self._p4.user = user
@@ -236,14 +387,14 @@ class ConnectionHandler(object):
             # show the connection dialog:
             result, _ = self._fw.engine.show_modal("Perforce Connection", self._fw, OpenConnectionForm, 
                                                    server, user, sg_user, initial_workspace, self._setup_connection_dlg)
-           
+
             if result == QtGui.QDialog.Accepted:
                 # all good so return the p4 object:
                 self._save_current_workspace(self._p4.client)
                 return self._p4
 
         except Exception, e:
-            print e
+            pass
             
         
         return None
@@ -308,8 +459,42 @@ class ConnectionHandler(object):
                                                  error_msg, parent_widget)
         
         return (res, widget.password)
-        
+
     def _on_browse_workspace(self, widget):
+        """
+        """
+        if not self._do_connect_and_login(widget):
+            return
+
+        # prompt user to select workspace:
+        ws_name = self._prompt_for_workspace(self._p4.user, widget.workspace, widget)
+        if ws_name:
+            widget.workspace = ws_name
+
+    def _on_open_connection(self, widget):
+        """
+        """
+        if not widget.workspace:
+            return
+
+        if not self._do_connect_and_login(widget):
+            return
+
+        # make sure the workspace is valid:
+        try:
+            self._validate_workspace(widget.workspace, widget.user)
+            self._p4.client = str(widget.workspace)
+        except TankError, e:
+            # likely that the user isn't valid!
+            QtGui.QMessageBox.information(widget, "Invalid Perforce Workspace!",
+                                          ("Workspace '%s' is not valid for user '%s' on the Perforce server"
+                                           ":\n\n    '%s'\n\n%s" % (widget.workspace, widget.user, server, e)))
+            return
+
+        # success so lets close the widget!
+        widget.close()
+
+    def _do_connect_and_login(self, widget):
         """
         """
         if not widget.user:
@@ -317,7 +502,7 @@ class ConnectionHandler(object):
             msg = ("Unable to browse Perforce Workspaces without a corresponding "
                   "Perforce username for Shotgun user:\n\n   '%s'" % (sg_user["name"] if sg_user else "Unknown"))
             QtGui.QMessageBox.warning(widget, "Unknown Perforce User!", msg)            
-            return
+            return False
 
         server = self._fw.get_setting("server")
         try:
@@ -327,8 +512,18 @@ class ConnectionHandler(object):
         except TankError, e:
             QtGui.QMessageBox.information(widget, "Perforce Connection Failed", 
                                           "Failed to connect to Perforce server:\n\n    '%s'\n\n%s" % (server, e))
-            return
-                
+            return False
+
+        # ensure that the connection is trusted:
+        try:
+            is_trusted, _ = self._ensure_connection_is_trusted(True, widget)
+            if not is_trusted:
+                return False
+        except TankError, e:
+            QtGui.QMessageBox.information(widget, "Perforce Connection Not Trusted", 
+                                          "The connection to the Perforce server:\n\n    '%s'\n\is not trusted: %s" % (server, e))
+            return False
+
         try:
             # make sure the current user is logged in:                
             self._login_user(widget.user, widget)
@@ -337,61 +532,10 @@ class ConnectionHandler(object):
             QtGui.QMessageBox.information(widget, "Perforce Log-in Failed", 
                                           ("Failed to log-in user '%s' to the Perforce server:\n\n    '%s'\n\n%s" 
                                           % (widget.user, server, e)))
-            return
-        
-        # prompt user to select workspace:
-        ws_name = self._prompt_for_workspace(self._p4.user, widget.workspace, widget)
-        if ws_name:
-            widget.workspace = ws_name
-        
-    def _on_open_connection(self, widget):
-        """
-        """
-        if not widget.user:
-            sg_user = sgtk.util.get_current_user(self._fw.sgtk)
-            msg = ("Unable to connect to Perforce without a corresponding "
-                  "Perforce username for Shotgun user:\n\n   '%s'" % (sg_user["name"] if sg_user else "Unknown"))
-            QtGui.QMessageBox.warning(widget, "Unknown Perforce User!", msg)
-            return
-        
-        if not widget.workspace:
-            return
+            return False
 
-        server = self._fw.get_setting("server")
-        
-        # ensure we are connected:
-        try:
-            if not self._p4 or not self._p4.connected():
-                self.connect_to_server()
-        except TankError, e:
-            QtGui.QMessageBox.information(widget, "Perforce Connection Failed", 
-                                          "Failed to connect to Perforce server:\n\n    '%s'\n\n%s" % (server, e))
-            return
-        
-        # make sure the current user is logged in:        
-        try:        
-            self._login_user(widget.user, widget)
-        except TankError, e:
-            # likely that the user isn't valid!
-            QtGui.QMessageBox.information(widget, "Perforce Log-in Failed", 
-                                          ("Failed to log-in user '%s' to the Perforce server:\n\n    '%s'\n\n%s" 
-                                          % (widget.user, server, e)))
-            return
-        
-        # make sure the workspace is valid:        
-        try:        
-            self._validate_workspace(widget.workspace, widget.user)
-            self._p4.client = str(widget.workspace)   
-        except TankError, e:
-            # likely that the user isn't valid!
-            QtGui.QMessageBox.information(widget, "Invalid Perforce Workspace!",
-                                          ("Workspace '%s' is not valid for user '%s' on the Perforce server"
-                                           ":\n\n    '%s'\n\n%s" % (widget.workspace, widget.user, server, e)))
-            return
-        
-        # success so lets close the widget!
-        widget.close()
-    
+        return True
+
     def _get_current_workspace(self):
         """
         """

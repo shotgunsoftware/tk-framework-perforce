@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'password_form.ui'
 #
-#      by: pyside-uic 0.2.13 running on PySide 1.1.0
+#      by: pyside-uic 0.2.15 running on PySide 1.1.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -74,6 +74,6 @@ class Ui_PasswordForm(object):
         self.invalid_label.setText(QtGui.QApplication.translate("PasswordForm", "Log-in failed: Password Incorrect", None, QtGui.QApplication.UnicodeUTF8))
         self.details_btn.setText(QtGui.QApplication.translate("PasswordForm", "Show Details...", None, QtGui.QApplication.UnicodeUTF8))
         self.cancel_btn.setText(QtGui.QApplication.translate("PasswordForm", "Cancel", None, QtGui.QApplication.UnicodeUTF8))
-        self.ok_btn.setText(QtGui.QApplication.translate("PasswordForm", "Ok", None, QtGui.QApplication.UnicodeUTF8))
+        self.ok_btn.setText(QtGui.QApplication.translate("PasswordForm", "Connect", None, QtGui.QApplication.UnicodeUTF8))
 
 from . import resources_rc

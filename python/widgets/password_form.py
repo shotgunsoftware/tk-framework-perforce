@@ -35,6 +35,8 @@ class PasswordForm(QtGui.QWidget):
         """
         QtGui.QWidget.__init__(self, parent)
         
+        self._exit_code = QtGui.QDialog.Rejected
+        
         # setup ui
         self.__ui = Ui_PasswordForm()
         self.__ui.setupUi(self)

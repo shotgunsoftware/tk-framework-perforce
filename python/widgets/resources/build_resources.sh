@@ -39,6 +39,7 @@ echo "building user interfaces..."
 build_ui open_connection_form
 build_ui password_form
 build_ui select_workspace_form
+build_ui trust_form
 
 # build resources
 echo "building resources..."

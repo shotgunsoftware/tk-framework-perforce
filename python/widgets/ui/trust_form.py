@@ -1,0 +1,86 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'trust_form.ui'
+#
+#      by: pyside-uic 0.2.15 running on PySide 1.1.1
+#
+# WARNING! All changes made in this file will be lost!
+
+from tank.platform.qt import QtCore, QtGui
+
+class Ui_TrustForm(object):
+    def setupUi(self, TrustForm):
+        TrustForm.setObjectName("TrustForm")
+        TrustForm.resize(500, 178)
+        self.verticalLayout_3 = QtGui.QVBoxLayout(TrustForm)
+        self.verticalLayout_3.setSpacing(2)
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setSpacing(12)
+        self.horizontalLayout.setContentsMargins(12, 12, 12, 8)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.verticalLayout_2 = QtGui.QVBoxLayout()
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.warning_label = QtGui.QLabel(TrustForm)
+        self.warning_label.setMinimumSize(QtCore.QSize(0, 0))
+        self.warning_label.setMaximumSize(QtCore.QSize(64, 64))
+        self.warning_label.setText("")
+        self.warning_label.setObjectName("warning_label")
+        self.verticalLayout_2.addWidget(self.warning_label)
+        spacerItem = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.verticalLayout_2.addItem(spacerItem)
+        self.horizontalLayout.addLayout(self.verticalLayout_2)
+        self.verticalLayout = QtGui.QVBoxLayout()
+        self.verticalLayout.setSpacing(-1)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.msg_label = QtGui.QLabel(TrustForm)
+        self.msg_label.setWordWrap(True)
+        self.msg_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        self.msg_label.setObjectName("msg_label")
+        self.verticalLayout.addWidget(self.msg_label)
+        self.trust_cb = QtGui.QCheckBox(TrustForm)
+        self.trust_cb.setObjectName("trust_cb")
+        self.verticalLayout.addWidget(self.trust_cb)
+        self.horizontalLayout.addLayout(self.verticalLayout)
+        self.horizontalLayout.setStretch(1, 1)
+        self.verticalLayout_3.addLayout(self.horizontalLayout)
+        spacerItem1 = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.verticalLayout_3.addItem(spacerItem1)
+        self.break_line = QtGui.QFrame(TrustForm)
+        self.break_line.setFrameShape(QtGui.QFrame.HLine)
+        self.break_line.setFrameShadow(QtGui.QFrame.Sunken)
+        self.break_line.setObjectName("break_line")
+        self.verticalLayout_3.addWidget(self.break_line)
+        self.horizontalLayout_3 = QtGui.QHBoxLayout()
+        self.horizontalLayout_3.setContentsMargins(12, 8, 12, 12)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.details_btn = QtGui.QPushButton(TrustForm)
+        self.details_btn.setObjectName("details_btn")
+        self.horizontalLayout_3.addWidget(self.details_btn)
+        spacerItem2 = QtGui.QSpacerItem(0, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem2)
+        self.cancel_btn = QtGui.QPushButton(TrustForm)
+        self.cancel_btn.setMinimumSize(QtCore.QSize(90, 0))
+        self.cancel_btn.setObjectName("cancel_btn")
+        self.horizontalLayout_3.addWidget(self.cancel_btn)
+        self.ok_btn = QtGui.QPushButton(TrustForm)
+        self.ok_btn.setMinimumSize(QtCore.QSize(90, 0))
+        self.ok_btn.setDefault(True)
+        self.ok_btn.setObjectName("ok_btn")
+        self.horizontalLayout_3.addWidget(self.ok_btn)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_3)
+        self.verticalLayout_3.setStretch(1, 1)
+
+        self.retranslateUi(TrustForm)
+        QtCore.QMetaObject.connectSlotsByName(TrustForm)
+
+    def retranslateUi(self, TrustForm):
+        TrustForm.setWindowTitle(QtGui.QApplication.translate("TrustForm", "Form", None, QtGui.QApplication.UnicodeUTF8))
+        self.msg_label.setText(QtGui.QApplication.translate("TrustForm", "<html><head/><body><p><span style=\" font-weight:600;\">The authenticity of the server &lt;server&gt; can\'t be established.</span></p><p>The fingerprint of the public key sent by the server is:</p><p>&lt;fingerprint&gt;</p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
+        self.trust_cb.setText(QtGui.QApplication.translate("TrustForm", "Trust this fingerprint for future connections to this server?", None, QtGui.QApplication.UnicodeUTF8))
+        self.details_btn.setText(QtGui.QApplication.translate("TrustForm", "Show Details...", None, QtGui.QApplication.UnicodeUTF8))
+        self.cancel_btn.setText(QtGui.QApplication.translate("TrustForm", "Cancel", None, QtGui.QApplication.UnicodeUTF8))
+        self.ok_btn.setText(QtGui.QApplication.translate("TrustForm", "Connect", None, QtGui.QApplication.UnicodeUTF8))
+
