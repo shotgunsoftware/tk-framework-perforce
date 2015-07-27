@@ -1,4 +1,4 @@
-Copyright (c) 2007-2008, Perforce Software, Inc. All rights reserved.
+Copyright (c) 2007-2015, Perforce Software, Inc. All rights reserved.
 Portions Copyright (c) 1999, Mike Meyer. All rights reserved.
 Portions Copyright (c) 2004-2007, Robert Cowham. All rights reserved.
 

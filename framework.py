@@ -139,34 +139,6 @@ class PerforceFramework(sgtk.platform.Framework):
         
         # Python version:
         py_version_str = "%d%d" % (sys.version_info[0], sys.version_info[1])
-        
-        # Perforce server version:
-        #
-        # The version of P4Python required to work with a Perforce server version
-        # is a bit random!  Ideally it should be the same version but a different
-        # version may work without problems depending on API changes and required
-        # functionality.
-        #
-        # The following code attempts to order the available versions for the 
-        # server prioritizing the version specified in the settings
-        p4d_version = self.get_setting("server_version")
-        supported_versions = sorted([2015.1, 2012.1], reverse=True)
-        preferred_version = supported_versions[0]
-        if p4d_version not in supported_versions:
-            # no exact match found so look for highest version matching
-            # major version only:
-            for v in supported_versions:
-                # check if the version is in range: 
-                if int(p4d_version) <= v <= p4d_version:
-                    preferred_version = v
-                    break
-
-        # build list of p4d version strings:
-        p4d_version_strings = []
-        ordered_p4d_versions = [preferred_version] + [v for v in supported_versions if v != preferred_version]
-        for v in ordered_p4d_versions:
-            p4d_version_str = ("%f" % v).rstrip("0")
-            p4d_version_strings.append(p4d_version_str)
 
         # platform/os string
         os_str = {"darwin":"mac", "win32":"win64" if sys.maxsize > 2**32 else "win32", "linux2":"linux"}[sys.platform]
@@ -215,31 +187,30 @@ class PerforceFramework(sgtk.platform.Framework):
         loaded_p4 = False
         preferred_p4_path = ""
         for compiler_str in compiler_strings:
-            for p4d_version_str in p4d_version_strings:
-                p4python_dir = "p4python_py%s_p4d%s%s_%s" % (py_version_str, p4d_version_str, compiler_str, os_str)
-                p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
-                if compiler_str == preferred_compiler_str:
-                    preferred_p4_path = p4_path
-    
-                # append it to the path:
-                if p4_path not in sys.path: 
-                    sys.path.append(p4_path)
-                try:
-                    # attempt to import P4
-                    from P4 import P4
-                except:
-                    # failed to load so lets remove it from the path!
-                    if sys.path[-1] == p4_path:
-                        del sys.path[-1]
-                else:
-                    loaded_p4 = True
-                    break
+            p4python_dir = "p4python_py%s%s_%s" % (py_version_str, compiler_str, os_str)
+            p4_path = os.path.join(self.disk_location, "resources", p4python_dir, "python")
+            if compiler_str == preferred_compiler_str:
+                preferred_p4_path = p4_path
+
+            # append it to the path:
+            if p4_path not in sys.path: 
+                sys.path.append(p4_path)
+            try:
+                # attempt to import P4
+                from P4 import P4
+            except:
+                # failed to load so lets remove it from the path!
+                if sys.path[-1] == p4_path:
+                    del sys.path[-1]
+            else:
+                loaded_p4 = True
+                break
 
         if not loaded_p4:
             if not os.path.exists(preferred_p4_path):
-                self.log_error("Unable to locate a compatible version of P4Python for Python v%d.%d, P4D v%s%s. "
+                self.log_error("Unable to locate a compatible version of P4Python for Python v%d.%d%s. "
                                "Please contact toolkitsupport@shotgunsoftware.com for assistance!" 
-                               % (sys.version_info[0], sys.version_info[1], p4d_version_str, preferred_compiler_str))
+                               % (sys.version_info[0], sys.version_info[1], preferred_compiler_str))
             else:            
                 self.log_error("Failed to load P4Python!")
         else:

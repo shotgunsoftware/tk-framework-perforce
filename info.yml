@@ -28,12 +28,7 @@ configuration:
                       given a new protocol, name or port, adding the original to this list will allow
                       Toolkit to continue using publishes that were published to the old server.  The
                       current server should always be specified in the 'server' setting."
-        
-    server_version:
-        type: float
-        description: "Version of the Perforce Server to connect to."
-        default_value: 2012.1
-    
+
     host:
         type: str
         description: "Name of the host computer to impersonate when connecting to Perforce.  
