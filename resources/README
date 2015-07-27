@@ -1,0 +1,204 @@
+# Copyright (c) 2015 Shotgun Software Inc.
+#
+# CONFIDENTIAL AND PROPRIETARY
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
+# Source Code License included in this distribution package. See LICENSE.
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
+# not expressly granted therein are reserved by Shotgun Software Inc.
+
+=========================================================
+Build instructions for the different versions of P4Python
+=========================================================
+
+This doc describes the steps taken to build P4Python for use with Toolkit.  Thorough up-to-date instructions 
+can be found here:
+
+    http://www.perforce.com/perforce/doc.current/user/p4pythonnotes.txt
+
+or in the latest version of the source distribution here:
+
+    ftp://ftp.perforce.com/perforce
+
+(look for ftp://ftp.perforce.com/perforce/<version>/bin.tools/p4python.tgz where <version> is usually 
+major.1, e.g. 2015.1.  It's also a good idea to check for patch releases in subsequent minor versions,
+e.g. 2015.2/.3/etc.)
+
+
+Compatibility
+-------------
+
+Detailed compatibility notes for each version of P4Python can be found in the p4pythonnotes.txt but a 
+general summary follows (correct as of P4Python 2015.1)
+
+** Server compatibility **
+You can use any version of P4Python with any release of the Perforce server later than 2001.1.  With that 
+in mind it generally makes sense to just use the latest available server version when building a new P4Python 
+release.
+
+** API compatibility **
+The P4Python source generally requires at least the same version of the Perforce API.  This means you can
+build P4Python 2015.1 against a 2015.2 API but you can't build P4Python 2015.1 against API version 2014.2.
+Again, with that in mind it generally makes sense to match the versions if possible.
+
+** Python compatibility **
+P4Python can be built against Python v2.6 through to 3.4 with the exception of 3.0, 3.1 & 3.2 which are
+not supported.
+
+** SSL compatibility **
+All versions of P4Python distributed with Toolkit are built with SSL support.  Perforce requires OpenSSL
+v1.0.1 or above but generally it's a good idea to always use the latest version that's available.
+
+
+Building with Visual Studio on Windows 
+--------------------------------------
+
+It's possible to build P4Python and the required OpenSSL libs in the Express versions of Visual Studio
+but for earlier versions (VS 2010 and earlier) you will also need the 64-bit compiler which isn't 
+included with the Express editions.  The 64-bit cross compiler is included with Visual Studio 2012+.
+
+The following lists the requirements for building with the different Visual Studio versions: 
+
+    Visual Studio Express 2008 x64/VC9  -> Use Windows 7.0 SDK command prompt and setup the correct
+                                           build environment by running: setenv /x64 /Release
+    Visual Studio Express 2010 x64/VC10 -> Use Windows 7.1 SDK Command prompt and setup the correct
+                                           build environment by running: setenv /x64 /Release
+    Visual Studio Express 2012 x64/VC11 -> Use VS2012 x64 Cross tools command prompt and setup the correct
+                                           build environment by running: vcvarsall x86_amd64
+
+** Note **
+Make sure the command prompt is setup to build the correct configuration (x64, Release) by using either 
+the setenv or vcvarsall command (see above).
+
+
+Building OpenSSL
+----------------
+
+When building P4Python you should aim to link to the latest version of the OpenSSL libraries.  To do this
+it's simplest to build them from source.
+
+1. Download the latest OpenSSL source - the simplest way to get the source is from git:
+
+    git clone git://git.openssl.org/openssl.git
+
+   And then checkout the latest stable tag, e.g.
+
+    git checkout OpenSSL_1_0_2d -b 1.0.2d
+
+2. Build OpenSSL
+
+    ** OSX **
+    The standard docs detail how to build OpenSSL for OSX and can be found here:
+
+     https://wiki.openssl.org/index.php/Compilation_and_Installation
+
+    The basic steps are:
+
+    i.   cd into the openssl source folder
+    ii.  Run:
+            ./Configure darwin64-x86_64-cc enable-ec_nistp_64_gcc_128 no-ssl2 no-ssl3 no-comp --openssldir=/usr/local/ssl/macos-x86_64
+            make
+            sudo make install
+
+         This will build the libraries into /usr/local/ssl/macos-x86_64
+
+   ** Windows **
+   There is a great guide detailing how to build OpenSSL for Visual Studio here:
+
+    http://developer.covenanteyes.com/building-openssl-for-visual-studio/
+
+   The basic steps are:
+
+   i.   Install Activeperl (required to run the build scripts)
+   ii.  Start a Visual Studio command prompt following the guidelines outlined above in 'Building with 
+        Visual Studio on Windows'. 
+   iii. cd into the openssl source folder
+   iv.  Run:
+           perl Configure VC-WIN64A --prefix=C:\Build-OpenSSL-VC-64
+           ms\do_win64a
+           nmake -f ms\nt.mak
+           nmake -f ms\nt.mak install
+
+        This will build the static libs into the directory specified by the prefix in the configure command.
+
+Building P4Python
+-----------------
+
+1. Download the P4Python source from the Perforce ftp site here:
+
+    ftp://ftp.perforce.com/perforce/<version>/bin.tools
+
+   Where <version> is typically the first major version of a release (e.g. 2015.1)
+
+2. Download the Perforce API from the platform specific Perforce ftp directory here:
+
+    Windows x64:    ftp://ftp.perforce.com/perforce/<version>/bin.ntx64/p4api_vs<vs_version>_dyn.zip
+    OSX:            ftp://ftp.perforce.com/perforce/<version>/bin.darwin90x86_64/p4api.tgz
+    Linux:          ftp://ftp.perforce.com/perforce/<version>/bin.<linux distribution>x86_64/p4api.tgz
+
+   Where <version> is typically the first major version of a release (e.g. r15.1), <vs_version> (Windows
+   only) is the Visual Studio version you are building with and <linux distribution> (Linux only) is the
+   Linux distribution...
+
+   ** NOTE (Windows only) **
+   Although the documentation states that the Perforce API should be built with the /MT (Multi-threaded, 
+   static CRT) switch, P4Python actually builds with the /MD (Multi-threaded, DLL CRT) switch - because 
+   of this we use the _dyn version of the p4api instead of the _static version.
+
+3. Download or build the latest OpenSSL libraries.
+
+   See 'Building OpenSSL' details above for how to build the latest OpenSSL libraries
+
+4. Extract the p4api, ssl libraries and p4python archive into separate directories.
+
+5. (Windows only) Start a visual studio command prompt for the version of visual studio that you want
+   to build with.  Note that if you are building 64-bit P4Python you must have either the 64-bit
+   or 64-bit cross compiler available so if you are using Visual Studio Express 2010 or earlier you
+   may also have to install the relevant Windows SDK and use it's command prompt instead (see 'Building 
+   with Visual Studio on Windows' section above). 
+
+5. Run the following command from the root of the p4python directory:
+
+    python setup.py build --apidir <Perforce C++ API absolute path> --ssl <Absolute path to ssl libraries>
+
+   using the python version you wish to target the P4Python build to.
+
+    <Perforce C++ API absolute path> - this is the absolute path to the root directory where the P4API
+                                       was extracted to
+    <Absolute path to ssl libraries> - this is the absolute path to the lib directory containing the OpenSSL
+                                       libraries P4Python should link with
+
+   ** NOTES **
+
+   -- Windows only --
+   You'll want to use the static OpenSSL libs built with the /MD switch which means you'll need to rename 
+   them (assuming you built the libs as detailed above).  Additionally, the P4Python build process expects 
+   them to be called ssleay64.lib & libeay64.lib instead of the standard ssleay32.lib & libeay32.lib 
+   respectively.  If you get link errors saying it can't find these libraries then double check the names 
+   first!
+
+   -- Windows VS2008 Express only --
+   When you try to build P4Python with Visual Studio 2008 express using the Windows 7.0 SDK command prompt, 
+   you may get an error from the distutils module: ValueError: [u'path', u'include', u'lib'].  To fix this, 
+   find and run vcvars64.bat (usually found in C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin) 
+   before building P4Python.
+
+   -- OSX Python 2.6 only --
+   When building P4Python on OSX using Python 2.6 you may get 'clang unknown argument' errors.  To get around
+   these add the following to your environment before building:
+
+    export CFLAGS=-Qunused-arguments
+    export CPPFLAGS=-Qunused-arguments
+
+   Assuming everything is set up correctly, this will build P4Python into a build sub-directory of the 
+   P4Python source directory.
+
+
+Distribution
+------------
+
+Once built, simply copy the P4.py and P4API.pyd files from the build/lib directory into the correct place
+in the framework and if necessary, update the code so that it finds it.  Also copy the LICENSE.txt from the
+P4Python directory and include this with the Python module.
+
