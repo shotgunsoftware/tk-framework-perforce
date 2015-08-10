@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 import sgtk
-from sgtk import Hook
+from sgtk import Hook, TankError
 from tank_vendor.shotgun_api3 import sg_timezone
 
 TK_FRAMEWORK_PERFORCE_NAME = "tk-framework-perforce_v0.x.x"

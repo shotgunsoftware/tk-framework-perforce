@@ -72,7 +72,10 @@ configuration:
         parameters: [depot_path, user, workspace, revision, p4]
         default_value: load_review_data
         description: ''
-        
+
+# This framework is shared so that there is only a single instance
+shared: True
+
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
 

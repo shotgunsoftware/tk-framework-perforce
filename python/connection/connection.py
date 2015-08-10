@@ -15,6 +15,7 @@ Common Perforce connection utility methods
 import os
 import socket
 import re
+import threading
 
 import sgtk
 from sgtk import TankError
@@ -25,8 +26,16 @@ from P4 import P4, P4Exception
 from .user_settings import UserSettings
 
 class SgtkP4Error(TankError):
+    """
+    Specialisation of TankError raised after catching and processing a P4Exception
+    """
     pass
-    
+
+# global connection rlock to ensure that attempting to connect to Perforce happens exclusively.  This
+# stops the user from being presented with multiple password entry dialogs if the framework needs to
+# connect from multiple threads and they enter the correct password for the first thread.
+_g_connection_lock = threading.RLock()
+
 class ConnectionHandler(object):
     """
     Encapsulate connecting to Perforce.  This pulls the settings from the various
@@ -39,6 +48,7 @@ class ConnectionHandler(object):
         """
         self._fw = fw
         self._p4 = None
+
 
     @property
     def connection(self):
@@ -253,7 +263,7 @@ class ConnectionHandler(object):
         """
         Prompt the user to enter/select the client/workspace to use
         
-        :return: String - the workspace to use for the connection
+        :returns: String - the workspace to use for the connection
         """
         if not self._p4 or not self._p4.connected():
             raise TankError("Unable to retrieve list of workspaces without an open Perforce connection!")
@@ -297,6 +307,10 @@ class ConnectionHandler(object):
                                 % (sg_user if sg_user else "<unknown>"))        
         workspace = workspace if workspace != None else self._get_current_workspace()
 
+        # lock around attempting to connect so that only one thread will attempt
+        # to connect at a time.
+        global _g_connection_lock
+        _g_connection_lock.acquire()
         try:
             # first, attempt to connect to the server:
             try:
@@ -355,6 +369,8 @@ class ConnectionHandler(object):
             else:
                 # re-raise the last exception:
                 raise
+        finally:
+            _g_connection_lock.release()
 
     def __has_ui(self):
         """
@@ -368,8 +384,13 @@ class ConnectionHandler(object):
         
         Returns a connected, logged-in p4 instance if successful.
         """
-        # ensure this always runs on the main thread:
-        return self._fw.engine.execute_in_main_thread(self._connect_with_dlg)
+        global _g_connection_lock
+        _g_connection_lock.acquire()
+        try:
+            # ensure this always runs on the main thread:
+            return self._fw.engine.execute_in_main_thread(self._connect_with_dlg)
+        finally:
+            _g_connection_lock.release()
     
     def _connect_with_dlg(self):
         """
@@ -407,14 +428,22 @@ class ConnectionHandler(object):
 
     def _do_login(self, allow_ui=True, parent_widget=None):
         """
-        :return: Tuple (success, show_details) - success = True if the user successfully logged in, False otherwise 
+        Login to the Perforce connection for the current user.  This first attempts to login and if it
+        fails then it will prompt the user for their password until successful or the user cancels.
+
+        :param allow_ui:        True if this method is allowed to show ui requesting the password from the
+                                user.  If False then the method will attempt to connect one and return
+        :param parent_widget:   The parent QWidget that the prompt dialog should be parented to.
+        :returns:               Tuple (success, show_details) - success is True if the user successfully logged 
+                                in, False otherwise.  show_details will be true if the user clicked the 'Show
+                                Details' button on the password prompt instead of entering their password.
         """
         error_msg = None
         is_first_attempt = True
 
         # loop until we successfully log in or decide to cancel:
         while True:
-                
+
             # attempt to log-in:
             try:
                 self._fw.log_debug("Attempting to log-in user %s to server %s" % (self._p4.user, self._p4.port))
@@ -425,39 +454,47 @@ class ConnectionHandler(object):
             else:
                 # successfully logged in!
                 return (True, False)
-            
+
             if allow_ui and self._fw.engine.has_ui:
-            
+
+                prompt_error_msg = None
+                if not is_first_attempt:
+                    prompt_error_msg = "Log-in failed: %s" % error_msg
+
                 # prompt for a password in the main thread:
-                from ..widgets import PasswordForm                
+                from ..widgets import PasswordForm
                 res, password = self._fw.engine.execute_in_main_thread(self._prompt_for_password,
-                                                                       None if is_first_attempt else ("Log-in failed: %s" % error_msg),
+                                                                       prompt_error_msg,
                                                                        parent_widget)
-                
+
                 if res == PasswordForm.SHOW_DETAILS:
-                    # just return the result:
+                    # user hit the show-details button so return accordingly:
                     return (False, True)
                 elif res != QtGui.QDialog.Accepted:
                     # User hit cancel!
                     return (False, False)
 
-                # update password for next iteration:                
+                # update password for next iteration:
                 self._p4.password = password
                 is_first_attempt = False
-            
+
             else:
                 # no UI so just raise error:
                 raise SgtkP4Error(error_msg)
-    
+
     def _prompt_for_password(self, error_msg, parent_widget):
         """
+        Prompt the user for their P4 password.  This must be run in the main thread.
+
+        :param error_msg:       Error message to display in the prompt dialog.
+        :param parent_widget:   Parent QWidget to for the prompt dialog.
+        :returns:               Tuple containing (dialog result, password)
         """
         # show the password entry dialog:
         from ..widgets import PasswordForm
         res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, PasswordForm,
                                                  self._p4.port, self._p4.user, (parent_widget == None), 
                                                  error_msg, parent_widget)
-        
         return (res, widget.password)
 
     def _on_browse_workspace(self, widget):
@@ -634,7 +671,7 @@ def connect(allow_ui=True, user=None, password=None, workspace=None):
                         set to '' then no workspace will be set for the new connection
     :returns P4:        A new Perforce connection instance if successful
     """
-    fw = sgtk.platform.current_bundle()    
+    fw = sgtk.platform.current_bundle()
     return ConnectionHandler(fw).connect(allow_ui, user, password, workspace)
     
 def connect_with_dialog():
