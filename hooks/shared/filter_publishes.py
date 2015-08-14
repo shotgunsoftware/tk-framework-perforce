@@ -12,7 +12,7 @@ import os
 import sys
 
 import sgtk
-from sgtk import Hook
+from sgtk import Hook, TankError
 
 TK_FRAMEWORK_PERFORCE_NAME = "tk-framework-perforce_v0.x.x"
 
