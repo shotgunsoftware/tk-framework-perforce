@@ -97,7 +97,7 @@ class ConnectionHandler(object):
 
     def _ensure_connection_is_trusted(self, allow_ui=True, parent_widget=None):
         """
-        Ensure that the current connection is trusted and if not then either prompt the user if possible.  For all
+        Ensure that the current connection is trusted and if not then prompt the user if possible.  For all
         non-ssl connections, this always returns True
 
         :param allow_ui:        True if we are allowed to prompt the user via a UI.
@@ -277,16 +277,26 @@ class ConnectionHandler(object):
             if res == QtGui.QDialog.Accepted:
                 return widget.workspace_name
         
-        except TankError, e:
+        except TankError:
             pass
         
         return None
-    
+
     def connect(self, allow_ui=True, user=None, password=None, workspace=None):
         """
         Utility method that returns a connection using the current configuration.  If a connection
         can't be established and the user is in ui mode then they will be prompted to edit the
         connection details.
+
+        :param allow_ui:    If True and the engine can show UI then we can prompt the user through
+                            dialogs if needed.  If False then UI is not allowed so this method will
+                            just raise if it can't connect for some reason.
+        :param user:        The username of the user to use when connecting with the Perforce server
+        :param password:    The password for the specified user to use when connecting to the server
+        :param workspace:   The name of the workspace/client-spec to use for this user when connecting
+                            to the server
+        :returns:           A new connected P4 instance if successful or None if the user cancels.
+        :raises:            TankError if connecting failed for some reason other than the user cancelling.
         """
         server = self._fw.get_setting("server")
         if not user:
@@ -294,7 +304,7 @@ class ConnectionHandler(object):
             user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sg_user)
             if not user:
                 raise TankError("Perforce: Failed to find Perforce user for Shotgun user '%s'" 
-                                % (sg_user if sg_user else "<unknown>"))        
+                                % (sg_user if sg_user else "<unknown>"))
         workspace = workspace if workspace != None else self._get_current_workspace()
 
         try:
@@ -308,34 +318,36 @@ class ConnectionHandler(object):
             try:
                 is_trusted, show_details = self._ensure_connection_is_trusted(allow_ui)
                 if show_details:
-                    # switch to connection dialog
-                    raise TankError()
+                    # switch to connection dialog - raise a TankError here which will get
+                    # raised if we aren't able to show the connection details dialog
+                    raise TankError("Perforce: Failed to establish trust with server!")
                 elif not is_trusted:
                     # user decided not to trust!:
-                    return
+                    return None
             except SgtkP4Error, e:
                 raise TankError("Perforce: Connection to server '%s' is not trusted: %s" % (server, e))
 
             # log-in user:
             try:
                 self._p4.user = user
-                
+
                 # if log-in is required then log-in:
                 login_req = self._login_required()
                 if login_req:
                     if password:
                         self._p4.password = password
-                        
+
                     logged_in, show_details = self._do_login(allow_ui)
                     if show_details:
-                        # switch to connection dialog
-                        raise TankError()
+                        # switch to connection dialog - raise a TankError here which will get
+                        # raised if we aren't able to show the connection details dialog
+                        raise TankError("Perforce: Failed to login user '%s'!" % user)
                     elif not logged_in:
                         # user cancelled log-in!
-                        return
+                        return None
             except SgtkP4Error, e:
-                raise TankError("Perforce: Failed to log-in user '%s' - %s" % (user, e))
-                
+                raise TankError("Perforce: Failed to login user '%s' - %s" % (user, e))
+
             # finally, validate the workspace:
             if workspace:
                 try:
@@ -343,9 +355,9 @@ class ConnectionHandler(object):
                     self._p4.client = str(workspace)
                 except SgtkP4Error, e:
                     raise TankError("Perforce: Workspace '%s' is not valid! - %s" % (workspace, e))
-                
+
             return self._p4
-            
+
         except TankError, e:
             # failed to connect to server - switch to UI mode
             # if available instead:
@@ -393,10 +405,9 @@ class ConnectionHandler(object):
                 self._save_current_workspace(self._p4.client)
                 return self._p4
 
-        except Exception, e:
+        except Exception:
             pass
-            
-        
+
         return None
 
     def _setup_connection_dlg(self, widget):
