@@ -209,7 +209,7 @@ class PerforceFramework(sgtk.platform.Framework):
         if not loaded_p4:
             if not os.path.exists(preferred_p4_path):
                 self.log_error("Unable to locate a compatible version of P4Python for Python v%d.%d%s. "
-                               "Please contact toolkitsupport@shotgunsoftware.com for assistance!" 
+                               "Please contact support@shotgunsoftware.com for assistance!" 
                                % (sys.version_info[0], sys.version_info[1], preferred_compiler_str))
             else:            
                 self.log_error("Failed to load P4Python!")
