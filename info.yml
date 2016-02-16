@@ -87,6 +87,3 @@ description: "Common Perforce functionality used by various apps & hooks"
 requires_shotgun_version:
 requires_core_version: "v0.14.61"
 
-# XXX will require core that supports metrics logging
- 
-        
