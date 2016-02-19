@@ -370,6 +370,12 @@ class ConnectionHandler(object):
                 except SgtkP4Error, e:
                     raise TankError("Perforce: Workspace '%s' is not valid! - %s" % (workspace, e))
 
+            try:
+                self._fw.log_metric("Connected")
+            except:
+                # ignore all errors. ex: using a core that doesn't support metrics
+                pass
+
             return self._p4
 
         except TankError, e:

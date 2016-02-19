@@ -87,5 +87,3 @@ description: "Common Perforce functionality used by various apps & hooks"
 requires_shotgun_version:
 requires_core_version: "v0.14.61"
 
- 
-        
