@@ -19,22 +19,23 @@ import threading
 
 import sgtk
 from sgtk import TankError
-from sgtk.platform.qt import QtGui, QtCore
+from sgtk.platform.qt import QtGui
 
 from P4 import P4, P4Exception
 
 from .user_settings import UserSettings
 
+
 class SgtkP4Error(TankError):
     """
     Specialisation of TankError raised after catching and processing a P4Exception
     """
-    pass
 
 # global connection rlock to ensure that attempting to connect to Perforce happens exclusively.  This
 # stops the user from being presented with multiple password entry dialogs if the framework needs to
 # connect from multiple threads and they enter the correct password for the first thread.
 _g_connection_lock = threading.RLock()
+
 
 class ConnectionHandler(object):
     """
@@ -42,6 +43,7 @@ class ConnectionHandler(object):
     different locations (config, Shotgun, user prefs) as well as being responsible
     for prompting the user if needed (and UI is available)
     """
+
     def __init__(self, fw):
         """
         Construction
@@ -49,10 +51,12 @@ class ConnectionHandler(object):
         self._fw = fw
         self._p4 = None
 
-
     @property
     def connection(self):
         """
+        Returns the P4 object for this connection.
+
+        :returns: A P4.P4 object.
         """
         return self._p4
 
@@ -233,7 +237,7 @@ class ConnectionHandler(object):
         from ..widgets import TrustForm
         res, widget = self._fw.engine.show_modal("Perforce Fingerprint Required", self._fw, TrustForm,
                                                  self._p4.port, fingerprint, fingerprint_changed,
-                                                 (parent_widget == None), parent_widget)
+                                                 (parent_widget is None), parent_widget)
         if res == TrustForm.SHOW_DETAILS:
             # just return the result:
             return (False, True)
@@ -276,7 +280,13 @@ class ConnectionHandler(object):
             raise SgtkP4Error(self._p4.errors[0] if self._p4.errors else str(e))
 
         host = socket.gethostname()
-        filtered_workspaces = [ws for ws in all_workspaces if ws.get("Host") == host]
+        self._fw.log_debug("Current host '%s'" % host)
+        self._fw.log_debug("All workspaces: %s" % all_workspaces)
+        # Get all workspaces that are assigned for this user for this machine or
+        # that are accessible from any machine. Note: Host is always set, but can
+        # be an empty string. In that case, we will consider the host for that workspace
+        # to be the current host.
+        filtered_workspaces = [ws for ws in all_workspaces if (ws.get("Host") or host) == host]
 
         # show the password entry dialog:
         try:
@@ -311,11 +321,11 @@ class ConnectionHandler(object):
         server = self._fw.get_setting("server")
         if not user:
             sg_user = sgtk.util.get_current_user(self._fw.sgtk)
-            user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sg_user)
+            user = self._fw.execute_hook("hook_get_perforce_user", sg_user=sg_user)
             if not user:
                 raise TankError("Perforce: Failed to find Perforce user for Shotgun user '%s'"
                                 % (sg_user if sg_user else "<unknown>"))
-        workspace = workspace if workspace != None else self._get_current_workspace()
+        workspace = workspace if workspace is not None else self._get_current_workspace()
 
         # lock around attempting to connect so that only one thread will attempt
         # to connect at a time.
@@ -398,9 +408,10 @@ class ConnectionHandler(object):
 
     def connect_with_dlg(self):
         """
-        Present the connection dialog to the user and prompt them to connect.
+        Present the connection dialog to the user and prompt them to connect in a thread-safe
+        manner.
 
-        Returns a connected, logged-in p4 instance if successful.
+        :returns: A connected, logged-in p4 instance if successful.
         """
         global _g_connection_lock
         _g_connection_lock.acquire()
@@ -412,10 +423,13 @@ class ConnectionHandler(object):
 
     def _connect_with_dlg(self):
         """
+        Actual implementation of connect_with_dlg.
+
+        :returns: A connected, logged-in p4 instance if successful.
         """
         server = self._fw.get_setting("server")
         sg_user = sgtk.util.get_current_user(self._fw.sgtk)
-        user = self._fw.execute_hook("hook_get_perforce_user", sg_user = sg_user)
+        user = self._fw.execute_hook("hook_get_perforce_user", sg_user=sg_user)
 
         try:
             from ..widgets import OpenConnectionForm
@@ -439,6 +453,7 @@ class ConnectionHandler(object):
 
     def _setup_connection_dlg(self, widget):
         """
+        Connects dialog events to the ConnectionHandler.
         """
         widget.browse_workspace_clicked.connect(self._on_browse_workspace)
         widget.open_clicked.connect(self._on_open_connection)
@@ -468,6 +483,7 @@ class ConnectionHandler(object):
             except P4Exception, e:
                 # keep track of error message:
                 error_msg = self._p4.errors[0] if self._p4.errors else str(e)
+                self._fw.log_debug(error_msg)
             else:
                 # successfully logged in!
                 return (True, False)
@@ -510,12 +526,16 @@ class ConnectionHandler(object):
         # show the password entry dialog:
         from ..widgets import PasswordForm
         res, widget = self._fw.engine.show_modal("Perforce Password", self._fw, PasswordForm,
-                                                 self._p4.port, self._p4.user, (parent_widget == None),
+                                                 self._p4.port, self._p4.user, (parent_widget is None),
                                                  error_msg, parent_widget)
+
         return (res, widget.password)
 
     def _on_browse_workspace(self, widget):
         """
+        Called when the user clics on the Browse button.
+
+        :param widget: Parent dialog for the workspace browser.
         """
         if not self._do_connect_and_login(widget):
             return
@@ -527,6 +547,9 @@ class ConnectionHandler(object):
 
     def _on_open_connection(self, widget):
         """
+        Called when the user clicks Connected on the connection dialog.
+
+        :param widget: Dialog object.
         """
         if not widget.workspace:
             return
@@ -542,7 +565,7 @@ class ConnectionHandler(object):
             # likely that the user isn't valid!
             QtGui.QMessageBox.information(widget, "Invalid Perforce Workspace!",
                                           ("Workspace '%s' is not valid for user '%s' on the Perforce server"
-                                           ":\n\n    '%s'\n\n%s" % (widget.workspace, widget.user, server, e)))
+                                           ":\n\n    '%s'\n\n%s" % (widget.workspace, widget.user, widget.server, e)))
             return
 
         # success so lets close the widget!
@@ -550,11 +573,14 @@ class ConnectionHandler(object):
 
     def _do_connect_and_login(self, widget):
         """
+        Connects to the server, validates the connection and authenticates.
+
+        :param widget: Dialog object.
         """
         if not widget.user:
             sg_user = sgtk.util.get_current_user(self._fw.sgtk)
             msg = ("Unable to browse Perforce Workspaces without a corresponding "
-                  "Perforce username for Shotgun user:\n\n   '%s'" % (sg_user["name"] if sg_user else "Unknown"))
+                   "Perforce username for Shotgun user:\n\n   '%s'" % (sg_user["name"] if sg_user else "Unknown"))
             QtGui.QMessageBox.warning(widget, "Unknown Perforce User!", msg)
             return False
 
@@ -585,13 +611,17 @@ class ConnectionHandler(object):
             # likely that the user isn't valid!
             QtGui.QMessageBox.information(widget, "Perforce Log-in Failed",
                                           ("Failed to log-in user '%s' to the Perforce server:\n\n    '%s'\n\n%s"
-                                          % (widget.user, server, e)))
+                                           % (widget.user, server, e)))
             return False
 
         return True
 
     def _get_current_workspace(self):
         """
+        Returns the current workspace based on the framework's settings or P4CLIENT is no setting
+        was found.
+
+        :returns: The name of the current workspace.
         """
         workspace = ""
         if self._fw.context.project:
@@ -604,10 +634,14 @@ class ConnectionHandler(object):
             if env_val:
                 workspace = env_val
 
+        self._fw.log_debug("Current workspace is '%s'" % workspace)
         return workspace
 
     def _save_current_workspace(self, workspace):
         """
+        Persists the current workspace name.
+
+        :param workspace: Name of the new current workspace.
         """
         if self._fw.context.project:
             settings = UserSettings("user_details")
@@ -615,6 +649,13 @@ class ConnectionHandler(object):
 
     def _validate_workspace(self, workspace, user):
         """
+        Checks if the workspace exists and is usable by a user.
+
+        :param workspace: Name of the workspace to validate.
+        :param user: User to check for ownership of the workspace.
+
+        :raises TankError: Raised if workspace doesn't exist or is not owned by the
+            user.
         """
         try:
             workspaces = self._p4.run_clients("-e", str(workspace))
@@ -638,7 +679,7 @@ class ConnectionHandler(object):
             # This will raise a P4Exception if the user isn't valid:
             # (TODO) - check this wasn't just a warning!
             users = self._p4.run_users(self._p4.user)
-        except P4Exception:
+        except P4Exception, e:
             raise SgtkP4Error(self._p4.errors[0] if self._p4.errors else str(e))
 
         if not users:
@@ -667,7 +708,7 @@ class ConnectionHandler(object):
             try:
                 timeout = int(ticket_status.get("TicketExpiration", "0"))
             except ValueError:
-                timeout=0
+                timeout = 0
             if timeout >= min_timeout:
                 # user is logged in and has enough
                 # time remaining
@@ -675,6 +716,7 @@ class ConnectionHandler(object):
 
         # user isn't logged in!
         return True
+
 
 def connect(allow_ui=True, user=None, password=None, workspace=None):
     """
@@ -691,6 +733,7 @@ def connect(allow_ui=True, user=None, password=None, workspace=None):
     fw = sgtk.platform.current_bundle()
     return ConnectionHandler(fw).connect(allow_ui, user, password, workspace)
 
+
 def connect_with_dialog():
     """
     Show the Perforce connection dialog
@@ -699,14 +742,3 @@ def connect_with_dialog():
     """
     fw = sgtk.platform.current_bundle()
     return ConnectionHandler(fw).connect_with_dlg()
-
-
-
-
-
-
-
-
-
-
-
