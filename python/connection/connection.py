@@ -549,7 +549,7 @@ class ConnectionHandler(object):
         """
         Called when the user clicks Connected on the connection dialog.
 
-        :param widget: Dialog object.
+        :param widget: The OpenConnectionForm object.
         """
         if not widget.workspace:
             return
@@ -575,7 +575,7 @@ class ConnectionHandler(object):
         """
         Connects to the server, validates the connection and authenticates.
 
-        :param widget: Dialog object.
+        :param widget: The OpenConnectionForm object.
         """
         if not widget.user:
             sg_user = sgtk.util.get_current_user(self._fw.sgtk)
@@ -618,8 +618,8 @@ class ConnectionHandler(object):
 
     def _get_current_workspace(self):
         """
-        Returns the current workspace based on the framework's settings or P4CLIENT is no setting
-        was found.
+        Returns the current workspace based on the frameworks settings or P4CLIENT
+        if no setting was found.
 
         :returns: The name of the current workspace.
         """
