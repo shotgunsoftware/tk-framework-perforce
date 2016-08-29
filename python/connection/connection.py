@@ -68,7 +68,7 @@ class ConnectionHandler(object):
             self._p4.disconnect()
         self._p4 = None
 
-    def connect_to_server(self, user=None):
+    def connect_to_server(self):
         """
         Open a connection to the specified server.
         Returns a new P4 connection object if successful
@@ -88,9 +88,6 @@ class ConnectionHandler(object):
         if host:
             p4.host = str(host)
 
-        if user:
-            p4.user = str(user)
-            
         # attempt to connect to the server:
         try:
             self._fw.log_debug("Attempting to connect to %s" % server)
@@ -337,7 +334,7 @@ class ConnectionHandler(object):
         try:
             # first, attempt to connect to the server:
             try:
-                self.connect_to_server(user)
+                self.connect_to_server()
             except SgtkP4Error, e:
                 raise TankError("Perforce: Failed to connect to perforce server '%s' - %s" % (server, e))
 
