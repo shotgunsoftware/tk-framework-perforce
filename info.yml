@@ -15,6 +15,7 @@ configuration:
 
     server:
         type: str
+        default_value: ''
         description: "Perforce server to connect to.  Should be of the form: 'protocol:server:port'. 
                      e.g. 'tcp:perforce:1666'"
         
