@@ -353,7 +353,7 @@ class ConnectionHandler(object):
 
             # log-in user:
             try:
-                self._p4.user = user
+                self._p4.user = str(user)
 
                 # if log-in is required then log-in:
                 login_req = self._login_required()
