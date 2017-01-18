@@ -52,7 +52,7 @@ class PerforceFramework(sgtk.platform.Framework):
         """
         Return the Perforce user associated with the specified Shotgun user
         """
-        if sg_user["id"] in self.__sg_to_p4_user: 
+        if sg_user["id"] in self.__sg_to_p4_user_map: 
             return self.__sg_to_p4_user_map[sg_user["id"]]
         
         p4_user = self.execute_hook("hook_get_perforce_user", sg_user = sg_user)
