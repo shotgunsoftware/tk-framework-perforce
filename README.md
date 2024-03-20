@@ -1,9 +1,9 @@
 ## Documentation
-This repository is a part of the Shotgun Pipeline Toolkit.
+This repository is a part of the Flow Production Tracking Toolkit.
 
 - For more information about this app and for release notes, *see the wiki section*.
 - For general information and documentation, click here: https://shotgunsoftware.zendesk.com/
-- For information about Shotgrid in general, click here: https://www.shotgridsoftware.com/
+- For information about Flow Production Tracking in general, click here: https://www.shotgridsoftware.com/
 
 ## Using this app in your Setup
 All the apps that are part of our standard app suite are pushed to our App Store. 
