@@ -1,0 +1,16 @@
+# YAML Configuration File for Qt Resource Building
+#
+# This YAML file defines the configuration for building Qt UI and resource files using the tk-build-qt-resources script.
+# Each entry in the file represents a separate build configuration, to know more about each field please visit
+# https://github.com/shotgunsoftware/tk-toolchain?tab=readme-ov-file#tk-build-qt-resources.
+
+- ui_src: python/widgets/resources
+  ui_files:
+    - open_connection_form
+    - password_form
+    - select_workspace_form
+    - trust_form
+  res_files:
+    - resources
+  py_dest: python/widgets/ui
+  import_pattern: tank.platform.qt
